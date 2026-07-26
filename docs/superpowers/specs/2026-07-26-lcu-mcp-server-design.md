@@ -237,9 +237,13 @@ it never surfaces a bare `ECONNREFUSED`.
 
 ## Security
 
-- **TLS.** The LCU's certificate is self-signed, but Riot publishes the issuing
-  root (`riotgames.pem`). The client pins it via the `ca:` option so
-  verification stays **on**. The process-global
+- **TLS.** The LCU's certificate is issued by Riot's own CA, and Riot publishes
+  that root (`riotgames.pem`). The client pins it via the `ca:` option so
+  verification stays **on**. Verified live: the served cert is `CN=rclient`,
+  issued by `LoL Game Engineering Certificate Authority`, with
+  `SAN: DNS:localhost, IP:127.0.0.1` — so pinning the CA alone passes both chain
+  and hostname verification against `127.0.0.1`. No `checkServerIdentity`
+  override and no disabled verification anywhere. The process-global
   `NODE_TLS_REJECT_UNAUTHORIZED=0` used during the spike is not used in the
   implementation — it would weaken every connection the process makes. Node 24's
   global `WebSocket` has no per-socket TLS option, so the `ws` package is used
