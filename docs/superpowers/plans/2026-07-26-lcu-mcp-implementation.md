@@ -1115,9 +1115,22 @@ export function matchesFilters(uri, filters) {
 
 export function truncateData(data, max = MAX_DATA_BYTES) {
   if (data === undefined || data === null) return { data, truncated: false };
-  const json = JSON.stringify(data);
-  if (json === undefined || json.length <= max) return { data, truncated: false };
-  return { data: json.slice(0, max), truncated: true };
+  let json;
+  try {
+    json = JSON.stringify(data);
+  } catch {
+    // Circular or otherwise unserialisable: report it rather than throwing at
+    // the caller, which is on the ingest path for every event.
+    return { data: '[unserialisable]', truncated: true };
+  }
+  if (json === undefined) return { data, truncated: false };
+  // The cap is in bytes, so measure bytes: a Korean or emoji-heavy payload is
+  // 3-4 bytes per character, and a character-count cap would let through
+  // several times the intended size. Slicing the Buffer can also land inside a
+  // multi-byte sequence, so drop the trailing partial character.
+  if (Buffer.byteLength(json, 'utf8') <= max) return { data, truncated: false };
+  const cut = Buffer.from(json, 'utf8').subarray(0, max).toString('utf8').replace(/�+$/, '');
+  return { data: cut, truncated: true };
 }
 
 // The subscribe ack arrives as an empty frame; parsing it as JSON throws.
