@@ -773,8 +773,15 @@ export class LcuClient {
     try {
       return await this.#send(creds, method, path, body);
     } catch (err) {
-      // A stale port survives in the cache when the client restarts between calls.
-      if (retry && (err.code === 'ECONNREFUSED' || err.code === 'ECONNRESET')) {
+      // A stale port survives in the cache when the client restarts between
+      // calls; that always shows up as ECONNREFUSED and is safe to retry for any
+      // method. ECONNRESET can instead mean the client applied a write and then
+      // dropped the socket, so retrying a POST/PUT/PATCH/DELETE on it would send
+      // the write twice — restrict that case to the idempotent methods.
+      const idempotent = /^(GET|HEAD)$/.test(String(method).toUpperCase());
+      const staleConnection =
+        err.code === 'ECONNREFUSED' || (err.code === 'ECONNRESET' && idempotent);
+      if (retry && staleConnection) {
         this.invalidate();
         return this.request(method, path, body, { retry: false });
       }
@@ -790,7 +797,7 @@ export class LcuClient {
   #send(creds, method, path, body) {
     const { options, payload } = buildRequestOptions({ creds, method, path, body, ca: this.ca });
     return new Promise((resolvePromise, reject) => {
-      const req = https.request({ ...options, agent: this.agent }, (res) => {
+      const req = https.request({ ...options, agent: this.agent, timeout: 10_000 }, (res) => {
         const chunks = [];
         res.on('data', (chunk) => chunks.push(chunk));
         res.on('end', () => {
@@ -805,8 +812,14 @@ export class LcuClient {
           }
           resolvePromise({ status: res.statusCode, body: parsed });
         });
+        // A response that ends mid-body emits on `res`, not on `req`: without
+        // this the promise never settles and the tool call hangs forever. The
+        // client does exactly this when it shuts down or patches mid-request.
+        res.on('error', reject);
       });
       req.on('error', reject);
+      // Escape hatch for a connection that never produces a response at all.
+      req.on('timeout', () => req.destroy(new Error('LCU request timed out')));
       if (payload !== undefined) req.write(payload);
       req.end();
     });
