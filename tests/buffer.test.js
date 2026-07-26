@@ -6,6 +6,23 @@ function fill(buffer, count, uri = '/lol-gameflow/v1/session') {
   for (let i = 0; i < count; i += 1) buffer.push({ eventType: 'Update', uri, data: i });
 }
 
+test('an event carrying seq or ts cannot overwrite the buffer numbering', () => {
+  const buffer = new RingBuffer(10);
+  const stored = buffer.push({ uri: '/a', seq: 999, ts: 0 });
+  assert.equal(stored.seq, 1);
+  assert.notEqual(stored.ts, 0);
+  assert.equal(buffer.since(0).cursor, 1);
+});
+
+test('a negative cursor is clamped instead of inflating dropped', () => {
+  const buffer = new RingBuffer(10);
+  fill(buffer, 3);
+  const result = buffer.since(-5);
+  assert.equal(result.dropped, 0);
+  assert.equal(result.entries.length, 3);
+  assert.equal(result.cursor, 3);
+});
+
 test('push assigns increasing seq numbers starting at 1', () => {
   const buffer = new RingBuffer(10);
   assert.equal(buffer.push({ uri: '/a' }).seq, 1);
