@@ -2061,7 +2061,7 @@ git commit -m "feat: curated LCU endpoint table"
 ### Task 12: Server skeleton, result helpers, and `lol_status`
 
 **Files:**
-- Create: `src/tools/result.js`, `src/tools/status.js`, `src/index.js`
+- Create: `src/tools/result.js`, `src/tools/status.js`, `src/index.js`, `tests/helpers/context.js`
 - Test: `tests/tools-status.test.js`
 
 **Interfaces:**
@@ -2071,19 +2071,14 @@ git commit -m "feat: curated LCU endpoint table"
   - `src/tools/status.js`: `registerStatusTool(server, ctx)`
   - `src/index.js`: `buildContext({ env }) -> ctx`, `createServer(ctx) -> McpServer`, and a `main()` that runs when the file is the entry point
   - `ctx` shape, relied on by every later task: `{ config, lcu, cdp, buffer, tap, secrets() }` where `secrets()` returns the array of live secret strings to redact (`[password]` or `[]`).
+  - `tests/helpers/context.js`: `fakeContext(overrides = {}) -> ctx` — the shared test double every later task's tests import. It is a helper module, not a test file, so it declares no tests.
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **Step 1: Write the shared test helper**
 
-`tests/tools-status.test.js`:
+`tests/helpers/context.js`. This is a plain module under `tests/helpers/`, not a test file — `node --test` only treats `*.test.js` as a suite, so it contributes no tests of its own. Every later task's tests import `fakeContext` from here.
 
 ```js
-import { test } from 'node:test';
-import assert from 'node:assert/strict';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import { createServer } from '../src/index.js';
-import { RingBuffer } from '../src/lcu/buffer.js';
-import { fail, guard, ok } from '../src/tools/result.js';
+import { RingBuffer } from '../../src/lcu/buffer.js';
 
 export function fakeContext(overrides = {}) {
   const buffer = new RingBuffer(10);
@@ -2109,6 +2104,20 @@ export function fakeContext(overrides = {}) {
     ...overrides
   };
 }
+```
+
+- [ ] **Step 2: Write the failing test**
+
+`tests/tools-status.test.js`:
+
+```js
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { createServer } from '../src/index.js';
+import { fail, guard, ok } from '../src/tools/result.js';
+import { fakeContext } from './helpers/context.js';
 
 async function connect(ctx) {
   const server = createServer(ctx);
@@ -2134,20 +2143,10 @@ test('guard redacts secrets out of thrown messages', async () => {
   assert.ok(result.content[0].text.includes('***'));
 });
 
-test('the server registers exactly the nine planned tools', async () => {
+test('the server registers exactly the tools wired so far', async () => {
   const { client } = await connect(fakeContext());
   const names = (await client.listTools()).tools.map((t) => t.name).sort();
-  assert.deepEqual(names, [
-    'lol_dom_query',
-    'lol_endpoints',
-    'lol_eval',
-    'lol_events_poll',
-    'lol_events_start',
-    'lol_events_stop',
-    'lol_get',
-    'lol_request',
-    'lol_status'
-  ]);
+  assert.deepEqual(names, ['lol_status']);
   await client.close();
 });
 
@@ -2171,14 +2170,12 @@ test('lol_status never leaks the password', async () => {
 });
 ```
 
-Tasks 13–16 import `fakeContext` from this file, so it is exported.
-
-- [ ] **Step 2: Run the test to verify it fails**
+- [ ] **Step 3: Run the test to verify it fails**
 
 Run: `node --test tests/tools-status.test.js`
 Expected: FAIL — `Cannot find module '../src/index.js'`.
 
-- [ ] **Step 3: Write the result helpers**
+- [ ] **Step 4: Write the result helpers**
 
 `src/tools/result.js`:
 
@@ -2205,7 +2202,7 @@ export function guard(handler, ctx) {
 }
 ```
 
-- [ ] **Step 4: Write the status tool**
+- [ ] **Step 5: Write the status tool**
 
 `src/tools/status.js`:
 
@@ -2243,9 +2240,9 @@ export function registerStatusTool(server, ctx) {
 }
 ```
 
-- [ ] **Step 5: Write the entry point**
+- [ ] **Step 6: Write the entry point**
 
-`src/index.js`. All nine tools are registered here; the register functions for Tasks 13–16 do not exist yet, so this step registers `lol_status` only and adds the other imports as each task lands. To keep the Step-1 test green from the start, write the full file now and create the four remaining tool modules in Tasks 13–16 — until then the test at Step 6 checks only what exists. Register in this order: status, passthrough, endpoints, events, dom.
+`src/index.js`. All nine tools eventually register here, but the register functions for Tasks 13–16 do not exist yet, so this step wires `lol_status` only — each later task adds its own import and call, and extends the Step-2 name assertion by its own names. Registration order, as tasks land: status, passthrough, endpoints, events, dom.
 
 ```js
 #!/usr/bin/env node
@@ -2305,10 +2302,6 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1].rep
 
 The entry-point guard compares `import.meta.url` against `process.argv[1]` with backslashes normalised, because on Windows `argv[1]` is a `C:\...` path while `import.meta.url` is a `file:///C:/...` URL.
 
-- [ ] **Step 6: Trim the test expectation for this task**
-
-Temporarily change the nine-tool assertion in `tests/tools-status.test.js` to `assert.deepEqual(names, ['lol_status'])` and leave a comment `// TODO(Task 16): restore the full nine-tool list`. Tasks 13–16 each add their names back; Task 16 restores the full sorted list and removes the comment.
-
 - [ ] **Step 7: Run the tests to verify they pass**
 
 Run: `npm test`
@@ -2317,7 +2310,7 @@ Expected: PASS — every suite, including the 5 tests in `tests/tools-status.tes
 - [ ] **Step 8: Commit**
 
 ```bash
-git add src/index.js src/tools/result.js src/tools/status.js src/lcu/client.js tests/tools-status.test.js
+git add src/index.js src/tools/result.js src/tools/status.js src/lcu/client.js tests/helpers/context.js tests/tools-status.test.js
 git commit -m "feat: MCP server skeleton with lol_status"
 ```
 
@@ -2331,7 +2324,7 @@ git commit -m "feat: MCP server skeleton with lol_status"
 - Test: `tests/tools-passthrough.test.js`
 
 **Interfaces:**
-- Consumes: `ctx.lcu.request` (Task 5), `checkWrite` (Task 2), `ok`/`fail`/`guard` (Task 12), `fakeContext` (Task 12 test file).
+- Consumes: `ctx.lcu.request` (Task 5), `checkWrite` (Task 2), `ok`/`fail`/`guard` (Task 12), `fakeContext` from `tests/helpers/context.js` (Task 12).
 - Produces: `registerPassthroughTools(server, ctx)` registering `lol_get({ path })` and `lol_request({ method, path, body? })`.
 
 `lol_request` is the single enforcement point for the write allowlist. A denied call returns `isError: true` with the paste-ready message from `checkWrite` and must **not** touch the client.
@@ -2346,7 +2339,7 @@ import assert from 'node:assert/strict';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createServer } from '../src/index.js';
-import { fakeContext } from './tools-status.test.js';
+import { fakeContext } from './helpers/context.js';
 
 async function connect(ctx) {
   const server = createServer(ctx);
@@ -2504,7 +2497,7 @@ In `src/index.js`, add `import { registerPassthroughTools } from './tools/passth
 
 - [ ] **Step 5: Update the tool-name assertion**
 
-In `tests/tools-status.test.js`, change the expected list to `['lol_get', 'lol_request', 'lol_status']` (sorted), keeping the TODO comment.
+In `tests/tools-status.test.js`, change the expected list to `['lol_get', 'lol_request', 'lol_status']` (sorted).
 
 - [ ] **Step 6: Run the tests to verify they pass**
 
@@ -2542,7 +2535,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createServer } from '../src/index.js';
 import { ENDPOINTS } from '../src/tools/curated.js';
-import { fakeContext } from './tools-status.test.js';
+import { fakeContext } from './helpers/context.js';
 
 async function connect() {
   const server = createServer(fakeContext());
@@ -2665,7 +2658,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createServer } from '../src/index.js';
 import { RingBuffer } from '../src/lcu/buffer.js';
-import { fakeContext } from './tools-status.test.js';
+import { fakeContext } from './helpers/context.js';
 
 function tapContext() {
   const buffer = new RingBuffer(100);
@@ -2892,7 +2885,7 @@ git commit -m "feat: event start/poll/stop tools"
 
 **Files:**
 - Create: `src/tools/dom.js`
-- Modify: `src/index.js`, `tests/tools-status.test.js` (restore the full nine-name list and delete the TODO comment)
+- Modify: `src/index.js`, `tests/tools-status.test.js` (extend the expected list to the full nine names)
 - Test: `tests/tools-dom.test.js`
 
 **Interfaces:**
@@ -2912,7 +2905,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createServer } from '../src/index.js';
 import { CdpUnavailableError } from '../src/cdp/discover.js';
-import { fakeContext } from './tools-status.test.js';
+import { fakeContext } from './helpers/context.js';
 
 function cdpContext({ allowEval = true } = {}) {
   const calls = [];
@@ -3066,12 +3059,26 @@ In `src/index.js`, import `registerDomTools` and call it last inside `createServ
 
 - [ ] **Step 5: Restore the full tool-name assertion**
 
-In `tests/tools-status.test.js`, restore the original nine-name sorted list from Task 12 Step 1 and delete the `// TODO(Task 16)` comment.
+In `tests/tools-status.test.js`, extend the expected list to the full nine names, sorted:
+
+```js
+  assert.deepEqual(names, [
+    'lol_dom_query',
+    'lol_endpoints',
+    'lol_eval',
+    'lol_events_poll',
+    'lol_events_start',
+    'lol_events_stop',
+    'lol_get',
+    'lol_request',
+    'lol_status'
+  ]);
+```
 
 - [ ] **Step 6: Run the whole suite**
 
 Run: `npm test`
-Expected: PASS — every suite, including the 5 tests in `tests/tools-dom.test.js` and the restored nine-tool assertion.
+Expected: PASS — every suite, including the 5 tests in `tests/tools-dom.test.js` and the full nine-tool assertion.
 
 - [ ] **Step 7: Commit**
 
