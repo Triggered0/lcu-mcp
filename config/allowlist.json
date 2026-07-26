@@ -1,0 +1,9 @@
+{
+  "allowEval": true,
+  "cdpPort": 8888,
+  "eventBufferSize": 1000,
+  "writeAllowlist": [
+    "POST /lol-matchmaking/v1/ready-check/accept",
+    "POST /lol-lobby/v2/lobby/matchmaking/search"
+  ]
+}
