@@ -2,7 +2,7 @@ import { watch } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { basename, dirname } from 'node:path';
 
-export const DEFAULT_LOCKFILE_PATH = 'C:\Riot Games\League of Legends\lockfile';
+export const DEFAULT_LOCKFILE_PATH = 'C:\\Riot Games\\League of Legends\\lockfile';
 
 export function parseLockfile(text) {
   const trimmed = String(text ?? '').trim();

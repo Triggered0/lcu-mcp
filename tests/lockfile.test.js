@@ -2,10 +2,16 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { parseLockfile, readCredentials, watchLockfileDir } from '../src/lcu/lockfile.js';
+import { join, win32 } from 'node:path';
+import { DEFAULT_LOCKFILE_PATH, parseLockfile, readCredentials, watchLockfileDir } from '../src/lcu/lockfile.js';
 
 const VALID = 'LeagueClient:26340:29669:tS8mFOfKZ-KpiUAZjs4pXQ:https';
+
+// Never reads the real file — only checks the constant survived string escaping.
+test('DEFAULT_LOCKFILE_PATH keeps its separators', () => {
+  assert.equal(DEFAULT_LOCKFILE_PATH, String.raw`C:\Riot Games\League of Legends\lockfile`);
+  assert.equal(win32.basename(DEFAULT_LOCKFILE_PATH), 'lockfile');
+});
 
 test('parses a valid lockfile', () => {
   const creds = parseLockfile(VALID);
@@ -51,8 +57,14 @@ test('watchLockfileDir fires when the lockfile is recreated', async () => {
   const path = join(dir, 'lockfile');
   writeFileSync(path, VALID, 'utf8');
 
+  // Bounded: a watcher that never fires must fail the test, not hang the suite.
   const fired = new Promise((resolve) => {
+    const deadline = setTimeout(() => {
+      stop();
+      resolve('no event within 5s');
+    }, 5000);
     const stop = watchLockfileDir(path, () => {
+      clearTimeout(deadline);
       stop();
       resolve(true);
     });
