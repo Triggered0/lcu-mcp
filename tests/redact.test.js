@@ -19,6 +19,20 @@ test('redactUrl returns non-URL input unchanged', () => {
   assert.equal(redactUrl('not a url'), 'not a url');
 });
 
+test('redactUrl strips passwords that percent-encode or hold regex metacharacters', () => {
+  for (const password of ['a b', 'a@b', 'a.b*c+d?e(f)[g]$h', 'p^ss|w"rd', 'senña']) {
+    const out = redactUrl(`https://riot:${password}@127.0.0.1:29669/index.html`);
+    assert.ok(!out.includes(password), `leaked ${password}`);
+    assert.equal(out, 'https://riot:***@127.0.0.1:29669/index.html');
+  }
+});
+
+test('redactUrl returns non-string input unchanged', () => {
+  assert.equal(redactUrl(undefined), undefined);
+  assert.equal(redactUrl(null), null);
+  assert.equal(redactUrl(29669), 29669);
+});
+
 test('redactSecrets removes every occurrence', () => {
   const text = `connect wss://riot:${PASSWORD}@127.0.0.1:1 failed for ${PASSWORD}`;
   const out = redactSecrets(text, [PASSWORD]);
