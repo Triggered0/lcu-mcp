@@ -44,13 +44,24 @@ export class LcuClient {
 
   async credentials() {
     if (this.#creds) return this.#creds;
-    this.#stopWatch ??= watchLockfileDir(this.lockfilePath, () => this.invalidate());
     try {
       this.#creds = await readCredentials(this.lockfilePath);
       this.#lastError = null;
     } catch (err) {
       this.#lastError = err.message;
       throw err;
+    }
+    // Only install the watcher after a successful read: fs.watch() throws
+    // synchronously when the lockfile's directory does not exist, and a watch
+    // failure here must not turn a good credential read into an error, nor
+    // mask the friendly "League client is not running" message with a raw
+    // ENOENT from watch().
+    if (!this.#stopWatch) {
+      try {
+        this.#stopWatch = watchLockfileDir(this.lockfilePath, () => this.invalidate());
+      } catch {
+        // Best effort: credentials are still valid without live-invalidation.
+      }
     }
     return this.#creds;
   }
@@ -64,17 +75,27 @@ export class LcuClient {
   }
 
   async request(method, path, body, { retry = true } = {}) {
+    const upperMethod = String(method).toUpperCase();
     const creds = await this.credentials();
     try {
-      return await this.#send(creds, method, path, body);
+      const result = await this.#send(creds, upperMethod, path, body);
+      this.#lastError = null;
+      return result;
     } catch (err) {
-      // A stale port survives in the cache when the client restarts between calls.
-      if (retry && (err.code === 'ECONNREFUSED' || err.code === 'ECONNRESET')) {
+      // A stale port survives in the cache when the client restarts between calls,
+      // which always manifests as ECONNREFUSED and is always safe to retry regardless
+      // of method. ECONNRESET can also mean "the server had already applied a write
+      // before dropping the connection", so it is only safe to retry for idempotent
+      // methods (GET/HEAD) — retrying a POST/PUT/PATCH/DELETE on ECONNRESET risks
+      // re-sending a non-idempotent write (e.g. duplicate matchmaking search).
+      const idempotent = upperMethod === 'GET' || upperMethod === 'HEAD';
+      const staleConnection = err.code === 'ECONNREFUSED' || (err.code === 'ECONNRESET' && idempotent);
+      if (retry && staleConnection) {
         this.invalidate();
-        return this.request(method, path, body, { retry: false });
+        return this.request(upperMethod, path, body, { retry: false });
       }
       this.#lastError = err.message;
-      throw new Error(`LCU request ${String(method).toUpperCase()} ${path} failed: ${err.message}`);
+      throw new Error(`LCU request ${upperMethod} ${path} failed: ${err.message}`);
     }
   }
 
@@ -85,7 +106,7 @@ export class LcuClient {
   #send(creds, method, path, body) {
     const { options, payload } = buildRequestOptions({ creds, method, path, body, ca: this.ca });
     return new Promise((resolvePromise, reject) => {
-      const req = https.request({ ...options, agent: this.agent }, (res) => {
+      const req = https.request({ ...options, agent: this.agent, timeout: 10_000 }, (res) => {
         const chunks = [];
         res.on('data', (chunk) => chunks.push(chunk));
         res.on('end', () => {
@@ -100,8 +121,15 @@ export class LcuClient {
           }
           resolvePromise({ status: res.statusCode, body: parsed });
         });
+        // A connection dropped mid-body (client shutdown/patching) emits no
+        // event on `req` at all — without this the promise would hang forever.
+        res.on('error', reject);
       });
       req.on('error', reject);
+      // Escape hatch for a connection that never produces a response at all.
+      // A late reject here, after resolvePromise already settled the promise,
+      // is a harmless no-op.
+      req.on('timeout', () => req.destroy(new Error('LCU request timed out')));
       if (payload !== undefined) req.write(payload);
       req.end();
     });
@@ -119,6 +147,7 @@ export class LcuClient {
   close() {
     this.#stopWatch?.();
     this.#stopWatch = null;
+    this.invalidate();
     this.agent.destroy();
   }
 }

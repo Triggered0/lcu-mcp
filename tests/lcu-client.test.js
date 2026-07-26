@@ -1,14 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { buildAuthHeader, buildRequestOptions } from '../src/lcu/client.js';
+import { buildAuthHeader, buildRequestOptions, LcuClient } from '../src/lcu/client.js';
+
+const CA_PATH = new URL('../certs/riotgames.pem', import.meta.url);
 
 test('buildAuthHeader uses the riot username', () => {
   assert.equal(buildAuthHeader('pw'), `Basic ${Buffer.from('riot:pw').toString('base64')}`);
 });
 
 test('buildRequestOptions targets 127.0.0.1 with auth and JSON body', () => {
-  const ca = readFileSync('certs/riotgames.pem');
+  const ca = readFileSync(CA_PATH);
   const { options, payload } = buildRequestOptions({
     creds: { port: 29669, password: 'pw' },
     method: 'post',
@@ -44,4 +46,21 @@ test('buildRequestOptions rejects a path without a leading slash', () => {
     () => buildRequestOptions({ creds: { port: 1, password: 'p' }, method: 'GET', path: 'lol-summoner/v1' }),
     /must start with "\/"/
   );
+});
+
+test('LcuClient never weakens TLS verification on its agent', () => {
+  const client = new LcuClient({ lockfilePath: 'C:\\nope\\lockfile', caPath: CA_PATH });
+  try {
+    assert.ok(
+      client.agent.options.ca.toString('utf8').includes('BEGIN CERTIFICATE'),
+      'agent must be constructed with the pinned CA PEM loaded'
+    );
+    assert.equal(
+      client.agent.options.rejectUnauthorized,
+      undefined,
+      'agent must never opt out of verification, even via merged per-request options'
+    );
+  } finally {
+    client.close();
+  }
 });
