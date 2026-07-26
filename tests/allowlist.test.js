@@ -1,11 +1,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { checkWrite } from '../src/allowlist.js';
+import { ALWAYS_ALLOWED, checkWrite } from '../src/allowlist.js';
 
 const list = [
   'POST /lol-matchmaking/v1/ready-check/accept',
   'POST /lol-champ-select/v1/session/actions/*'
 ];
+
+test('ALWAYS_ALLOWED is exported and holds exactly GET and HEAD', () => {
+  assert.deepEqual([...ALWAYS_ALLOWED].sort(), ['GET', 'HEAD']);
+});
 
 test('GET and HEAD are always allowed', () => {
   assert.equal(checkWrite('GET', '/anything', []).allowed, true);

@@ -1,4 +1,4 @@
-const ALWAYS_ALLOWED = new Set(['GET', 'HEAD']);
+export const ALWAYS_ALLOWED = new Set(['GET', 'HEAD']);
 
 function pathMatches(pattern, path) {
   if (!pattern.endsWith('/*')) return pattern === path;
