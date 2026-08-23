@@ -32,7 +32,7 @@ Two independent subsystems run inside one Node process:
 
 Both connect lazily and survive client restarts — the lockfile port changes on every launch, so the directory is watched rather than the file. Events are polled rather than pushed, because MCP has no server-to-client push.
 
-Design rationale and the live-verified protocol details live in [`docs/superpowers/specs/2026-07-26-lcu-mcp-server-design.md`](docs/superpowers/specs/2026-07-26-lcu-mcp-server-design.md).
+Design rationale and the live-verified protocol details live in [`docs/design.md`](docs/design.md).
 
 ## Requirements
 
