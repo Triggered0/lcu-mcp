@@ -8,6 +8,7 @@ import { LcuEventTap } from './lcu/events.js';
 import { CdpClient } from './cdp/client.js';
 import { registerStatusTool } from './tools/status.js';
 import { registerPassthroughTools } from './tools/passthrough.js';
+import { registerEndpointsTool } from './tools/endpoints.js';
 
 export function buildContext({ env = process.env } = {}) {
   const config = loadConfig({ env });
@@ -30,6 +31,7 @@ export function createServer(ctx) {
   const server = new McpServer({ name: 'lcu-mcp', version: '0.1.0' });
   registerStatusTool(server, ctx);
   registerPassthroughTools(server, ctx);
+  registerEndpointsTool(server, ctx);
   return server;
 }
 
