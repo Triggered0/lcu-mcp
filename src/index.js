@@ -9,6 +9,7 @@ import { CdpClient } from './cdp/client.js';
 import { registerStatusTool } from './tools/status.js';
 import { registerPassthroughTools } from './tools/passthrough.js';
 import { registerEndpointsTool } from './tools/endpoints.js';
+import { registerEventTools } from './tools/events.js';
 
 export function buildContext({ env = process.env } = {}) {
   const config = loadConfig({ env });
@@ -32,6 +33,7 @@ export function createServer(ctx) {
   registerStatusTool(server, ctx);
   registerPassthroughTools(server, ctx);
   registerEndpointsTool(server, ctx);
+  registerEventTools(server, ctx);
   return server;
 }
 
