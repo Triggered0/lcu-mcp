@@ -3,3 +3,16 @@ node_modules/
 *.log
 .env
 .DS_Store
+.serena/
+mempalace.yaml
+entities.json
+
+# Secrets: .env is not the only spelling
+.env.*
+
+# Local Claude Code permissions — personal, not shareable
+.claude/settings.local.json
+
+# Windows shell noise
+Thumbs.db
+desktop.ini
