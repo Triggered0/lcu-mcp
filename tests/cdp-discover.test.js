@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { CdpUnavailableError, findPageTarget, probeVersion, redactTarget } from '../src/cdp/discover.js';
+import { CdpUnavailableError, findPageTarget, penguHint, probeVersion, redactTarget } from '../src/cdp/discover.js';
 
 const PASSWORD = 'S3cr3t-Pa55';
 
@@ -80,4 +80,10 @@ test('no page target yields a distinct explanation', async () => {
   } finally {
     server.close();
   }
+});
+
+// Regression: the hint must carry the real Windows path, not a backslash-eaten one.
+test('penguHint names the actual Pengu config path', () => {
+  assert.match(penguHint(8888), /C:\\Program Files\\Pengu Loader\\config/);
+  assert.match(penguHint(8888), /RemoteDebuggingPort=8888/);
 });

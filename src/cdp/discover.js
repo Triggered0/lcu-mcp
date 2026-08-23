@@ -13,7 +13,7 @@ export class CdpUnavailableError extends Error {
 
 export function penguHint(port) {
   return (
-    `Set RemoteDebuggingPort=${port} in "C:\Program Files\Pengu Loader\config" ` +
+    `Set RemoteDebuggingPort=${port} in "C:\\Program Files\\Pengu Loader\\config" ` +
     '(plain key=value text, one pair per line), then restart the UX with ' +
     'POST /riotclient/kill-and-restart-ux.'
   );
