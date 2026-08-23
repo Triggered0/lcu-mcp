@@ -15,7 +15,7 @@ selectors.
 | Question | Decision |
 |---|---|
 | Purpose | Dev tool for this repo, not a user-facing product |
-| Tool surface | Generic passthrough core **plus** curated tools for the endpoints client-automation uses |
+| Tool surface | Generic passthrough core **plus** curated tools for the endpoints actually used |
 | Write policy | GET always allowed; mutating verbs only on a config allowlist, everything else refused with a clear message |
 | Location | Separate repo at `C:\path\to\lcu-mcp` |
 | Runtime | Node + `@modelcontextprotocol/sdk` |
@@ -148,7 +148,7 @@ crowd the tool list.
 
 ### Curated endpoints
 
-Derived from endpoints the client-automation modules actually call:
+Derived from the endpoints the calling modules actually use:
 
 - `/lol-gameflow/v1/gameflow-phase`, `/lol-gameflow/v1/session`
 - `/lol-champ-select/v1/session`, `/session/actions/{id}`,
