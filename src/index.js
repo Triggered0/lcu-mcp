@@ -10,6 +10,7 @@ import { registerStatusTool } from './tools/status.js';
 import { registerPassthroughTools } from './tools/passthrough.js';
 import { registerEndpointsTool } from './tools/endpoints.js';
 import { registerEventTools } from './tools/events.js';
+import { registerDomTools } from './tools/dom.js';
 
 export function buildContext({ env = process.env } = {}) {
   const config = loadConfig({ env });
@@ -34,6 +35,7 @@ export function createServer(ctx) {
   registerPassthroughTools(server, ctx);
   registerEndpointsTool(server, ctx);
   registerEventTools(server, ctx);
+  registerDomTools(server, ctx);
   return server;
 }
 
