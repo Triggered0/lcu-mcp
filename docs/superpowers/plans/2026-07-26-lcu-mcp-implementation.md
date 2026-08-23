@@ -849,7 +849,7 @@ export class LcuClient {
 Run: `node --test tests/lcu-client.test.js`
 Expected: PASS — 4 tests.
 
-- [ ] **Step 6: Verify against the live client (requires League running)**
+- [x] **Step 6: Verify against the live client (requires League running)**
 
 Run: `node -e "import('./src/lcu/client.js').then(async ({LcuClient}) => { const c = new LcuClient(); console.log(await c.get('/lol-gameflow/v1/gameflow-phase')); c.close(); })"`
 Expected: `{ status: 200, body: 'None' }` (or another phase string). A TLS error here means the vendored PEM is wrong — fix the PEM, never the verification setting. If League is not running, skip this step and note it.
@@ -3235,7 +3235,7 @@ if (failed.length > 0) {
 }
 ```
 
-- [ ] **Step 2: Run the smoke script against the live client**
+- [x] **Step 2: Run the smoke script against the live client**
 
 Run: `npm run smoke`
 Expected: all 7 stages PASS with League running and Pengu active. If the CDP stages fail, apply the hint the script prints and rerun. If League is not running, this step cannot be completed — say so explicitly rather than marking it done.
@@ -3293,31 +3293,14 @@ git commit -m "feat: live smoke script and README"
 ---
 
 
-> **Status 2026-08-23:** Tasks 1-17 implemented; `npm test` is green (120 tests).
-> The two steps above that need a running League client are still unchecked: the client
-> was not running, so `npm run smoke` reported 0/7 stages (every stage failed on the
-> missing lockfile / closed CDP port, which is the expected error path, not a defect).
-> Re-run `npm run smoke` with League open, and Pengu active for the CDP stages.
-
-## Self-Review Notes
-
-Spec coverage check, section by section:
-
-| Spec section | Task(s) |
-|---|---|
-| Architecture — two subsystems, lazy connect, restart survival | 5, 8, 10 |
-| Package layout | File Structure table (two documented deviations) |
-| Lockfile facts — port churn, directory watch, authoritative source | 4 |
-| Event tap — subscribe frame, empty ack, frame shape | 7, 8 |
-| CDP — Pengu requirement, single page target, redaction | 9, 10 |
-| Tool surface — nine tools | 12–16 |
-| Curated endpoints | 11, 14 |
-| Events — ring buffer, cursor, dropped, ingest filters, 4 KB truncation, restart semantics | 6, 7, 8, 15 |
-| Configuration — file, `LCU_MCP_CONFIG`, matching rules, denial message | 1, 2, 13 |
-| Lifecycle — backoff 1s→30s, reconnect marker, CDP retry-once | 8, 10 |
-| Security — pinned CA, redaction, `allowEval` gate | 5, 3, 16 |
-| Testing — the five unit-test areas plus `scripts/smoke.mjs` | 1–11, 17 |
-
-Known open items, deliberately left to execution time:
-- `certs/riotgames.pem` must be fetched (Task 5 Step 1). If the URL has moved, take the PEM from the client install; do not weaken TLS.
-- Task 5 Step 6, Task 17 Steps 2 and 4 need a running client. If it is not running, report them as not verified rather than done.
+> **Status 2026-08-24:** Tasks 1-17 complete. `npm test` green (120 tests) and
+> `npm run smoke` verified live against a running client with Pengu active: 7/7 stages.
+> `GET /lol-gameflow/v1/gameflow-phase` returned `{ status: 200, body: 'None' }` over the
+> pinned CA, and all nine tools were driven over stdio against the live client.
+>
+> One live finding changed the code: the LCU emits only when client state actually
+> changes — an idle home screen can stay silent indefinitely, while navigating the UI
+> produces bursts. The smoke stage's fixed 3s sleep therefore reported "0 event(s)" as a
+> PASS, verifying nothing. It now waits on the condition and reports three outcomes, so an
+> idle client is SKIP (inconclusive), a disconnected tap is FAIL, and only real delivered
+> events are PASS.

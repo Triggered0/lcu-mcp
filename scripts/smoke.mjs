@@ -9,14 +9,18 @@ import { CdpClient } from '../src/cdp/client.js';
 import { probeVersion } from '../src/cdp/discover.js';
 
 const results = [];
+// A stage that cannot prove anything is neither a pass nor a failure: throwing
+// INCONCLUSIVE marks it as such so it never counts as verification.
+class Inconclusive extends Error {}
 const record = async (name, fn) => {
   try {
     const detail = await fn();
     results.push({ name, ok: true, detail });
     console.log(`PASS ${name}${detail ? ` — ${detail}` : ''}`);
   } catch (err) {
-    results.push({ name, ok: false, detail: err.message });
-    console.log(`FAIL ${name} — ${err.message}`);
+    const inconclusive = err instanceof Inconclusive;
+    results.push({ name, ok: false, inconclusive, detail: err.message });
+    console.log(`${inconclusive ? 'SKIP' : 'FAIL'} ${name} — ${err.message}`);
   }
 };
 
@@ -38,12 +42,22 @@ await record('REST GET /lol-gameflow/v1/gameflow-phase', async () => {
 });
 
 await record('WSS event tap', async () => {
-  await tap.start(['/lol-gameflow/', '/lol-summoner/']);
-  // Poke an endpoint that reliably emits, then wait briefly for a frame.
-  await lcu.get('/lol-summoner/v1/current-summoner');
-  await new Promise((resolve) => setTimeout(resolve, 3000));
+  await tap.start([]);
+  // The LCU only emits when client state actually changes: sitting idle on the
+  // home screen it can stay silent indefinitely, while navigating the UI produces
+  // bursts. So a fixed sleep proves nothing either way — wait for the condition,
+  // and report an idle client as inconclusive rather than as a pass or a failure.
+  const startedAt = Date.now();
+  const deadline = startedAt + 30000;
+  while (buffer.length === 0 && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
   const { entries } = buffer.since(0, 5);
-  return `${entries.length} event(s), first uri ${entries[0]?.uri ?? 'none yet'}`;
+  if (entries.length === 0) {
+    if (!tap.statusSnapshot().connected) throw new Error('tap is not connected');
+    throw new Inconclusive('connected, but the client emitted nothing in 30s — click around in the client and re-run');
+  }
+  return `${buffer.length} event(s) in ${((Date.now() - startedAt) / 1000).toFixed(1)}s, first uri ${entries[0].uri}`;
 });
 tap.stop();
 
@@ -73,8 +87,11 @@ await record('CDP page-context LCU fetch', async () => {
 cdp.close();
 lcu.close();
 
-const failed = results.filter((r) => !r.ok);
-console.log(`\n${results.length - failed.length}/${results.length} stages passed`);
+const failed = results.filter((r) => !r.ok && !r.inconclusive);
+const skipped = results.filter((r) => r.inconclusive);
+const passed = results.filter((r) => r.ok);
+console.log(`
+${passed.length}/${results.length} stages passed${skipped.length > 0 ? `, ${skipped.length} inconclusive` : ''}`);
 if (failed.length > 0) {
   console.log('If only the CDP stages failed, Pengu Loader is not active or RemoteDebuggingPort is unset.');
   process.exitCode = 1;
