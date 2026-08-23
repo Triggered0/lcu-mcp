@@ -3250,7 +3250,7 @@ Expected: all 7 stages PASS with League running and Pengu active. If the CDP sta
 4. Registering with Claude Code:
 
 ```bash
-claude mcp add lcu --scope user -- node C:\\Users\\DELL\\Desktop\\lcu-mcp\\src\\index.js
+claude mcp add lcu --scope user -- node C:\\path\\to\\lcu-mcp\\src\\index.js
 ```
 
    and the equivalent `.mcp.json` block:
@@ -3260,8 +3260,8 @@ claude mcp add lcu --scope user -- node C:\\Users\\DELL\\Desktop\\lcu-mcp\\src\\
   "mcpServers": {
     "lcu": {
       "command": "node",
-      "args": ["C:\\Users\\DELL\\Desktop\\lcu-mcp\\src\\index.js"],
-      "env": { "LCU_MCP_CONFIG": "C:\\Users\\DELL\\Desktop\\lcu-mcp\\config\\allowlist.json" }
+      "args": ["C:\\path\\to\\lcu-mcp\\src\\index.js"],
+      "env": { "LCU_MCP_CONFIG": "C:\\path\\to\\lcu-mcp\\config\\allowlist.json" }
     }
   }
 }

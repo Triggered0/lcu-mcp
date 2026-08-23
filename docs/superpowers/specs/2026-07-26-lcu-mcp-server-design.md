@@ -17,7 +17,7 @@ selectors.
 | Purpose | Dev tool for this repo, not a user-facing product |
 | Tool surface | Generic passthrough core **plus** curated tools for the endpoints client-automation uses |
 | Write policy | GET always allowed; mutating verbs only on a config allowlist, everything else refused with a clear message |
-| Location | Separate repo at `C:\Users\DELL\Desktop\lcu-mcp` |
+| Location | Separate repo at `C:\path\to\lcu-mcp` |
 | Runtime | Node + `@modelcontextprotocol/sdk` |
 | DOM access | LCU **and** CDP from the start, not a follow-up phase |
 | Architecture | Approach A — one server, two subsystems |
