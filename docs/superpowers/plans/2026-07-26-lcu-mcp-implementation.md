@@ -64,7 +64,7 @@ Deviation from the spec's sketch, deliberate: allowlist matching lives in `src/a
 - Consumes: nothing.
 - Produces: `DEFAULTS` (object), `validateConfig(raw) -> config`, `loadConfig({ env, cwd }) -> { allowEval, cdpPort, eventBufferSize, writeAllowlist, configPath }`. A missing config file is **not** an error — defaults are returned with `configPath` set to the path that was looked for.
 
-- [ ] **Step 1: Create the package manifest**
+- [x] **Step 1: Create the package manifest**
 
 ```json
 {
@@ -88,12 +88,12 @@ Deviation from the spec's sketch, deliberate: allowlist matching lives in `src/a
 }
 ```
 
-- [ ] **Step 2: Install dependencies**
+- [x] **Step 2: Install dependencies**
 
 Run: `npm install`
 Expected: `node_modules/` created, `package-lock.json` written, no audit failures that block install.
 
-- [ ] **Step 3: Write the default config file**
+- [x] **Step 3: Write the default config file**
 
 `config/allowlist.json`:
 
@@ -109,7 +109,7 @@ Expected: `node_modules/` created, `package-lock.json` written, no audit failure
 }
 ```
 
-- [ ] **Step 4: Write the failing test**
+- [x] **Step 4: Write the failing test**
 
 `tests/config.test.js`:
 
@@ -159,12 +159,12 @@ test('validateConfig rejects wrong types', () => {
 });
 ```
 
-- [ ] **Step 5: Run the test to verify it fails**
+- [x] **Step 5: Run the test to verify it fails**
 
 Run: `npm test`
 Expected: FAIL — `Cannot find module '../src/config.js'`.
 
-- [ ] **Step 6: Write the implementation**
+- [x] **Step 6: Write the implementation**
 
 `src/config.js`:
 
@@ -218,12 +218,12 @@ export function loadConfig({ env = process.env, cwd = process.cwd() } = {}) {
 }
 ```
 
-- [ ] **Step 7: Run the test to verify it passes**
+- [x] **Step 7: Run the test to verify it passes**
 
 Run: `npm test`
 Expected: PASS — 4 tests.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add package.json package-lock.json config/allowlist.json src/config.js tests/config.test.js
@@ -242,7 +242,7 @@ git commit -m "feat: package scaffold and config loader"
 - Consumes: `writeAllowlist` array from Task 1's config.
 - Produces: `checkWrite(method, path, allowlist) -> { allowed: boolean, line: string, message?: string }`. `line` is the exact allowlist entry that would permit the call (`"POST /lol-lobby/v2/lobby"`). `message` is present only when `allowed` is false.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `tests/allowlist.test.js`:
 
@@ -290,12 +290,12 @@ test('denial names the exact line to add', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `node --test tests/allowlist.test.js`
 Expected: FAIL — `Cannot find module '../src/allowlist.js'`.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 `src/allowlist.js`:
 
@@ -333,12 +333,12 @@ export function checkWrite(method, path, allowlist = []) {
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `node --test tests/allowlist.test.js`
 Expected: PASS — 6 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/allowlist.js tests/allowlist.test.js
@@ -357,7 +357,7 @@ git commit -m "feat: write allowlist matching with paste-ready denial message"
 - Consumes: nothing.
 - Produces: `redactUrl(rawUrl) -> string` (replaces URL userinfo password with `***`, returns the input unchanged if it does not parse), `redactSecrets(text, secrets) -> string` (replaces every occurrence of each non-empty secret with `***`; non-string input is returned unchanged).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `tests/redact.test.js`:
 
@@ -396,12 +396,12 @@ test('redactSecrets ignores empty and non-string secrets', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `node --test tests/redact.test.js`
 Expected: FAIL — `Cannot find module '../src/redact.js'`.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 `src/redact.js`:
 
@@ -435,12 +435,12 @@ Slicing the raw string rather than going through `URL` is deliberate, and strict
 
 Add a test covering that class explicitly — passwords such as `'a b'`, `'a@b'`, `'a.b*c+d?e(f)[g]$h'`, `'p^ss|w"rd'`, `'senña'` must all come back as `https://riot:***@127.0.0.1:29669/index.html` — plus non-string input (`undefined`, `null`, a number) returned unchanged.
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `node --test tests/redact.test.js`
 Expected: PASS — 5 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/redact.js tests/redact.test.js
@@ -459,7 +459,7 @@ git commit -m "feat: credential redaction helpers"
 - Consumes: nothing.
 - Produces: `DEFAULT_LOCKFILE_PATH` (string), `parseLockfile(text) -> { name, pid, port, password, protocol }` (throws on malformed input), `readCredentials(path) -> Promise<credentials>` (throws a "client is not running" error on ENOENT), `watchLockfileDir(path, onChange) -> stop()` (watches the **directory**, fires `onChange()` for create/change/delete of the lockfile itself).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `tests/lockfile.test.js`:
 
@@ -546,12 +546,12 @@ test('watchLockfileDir fires when the lockfile is recreated', async () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `node --test tests/lockfile.test.js`
 Expected: FAIL — `Cannot find module '../src/lcu/lockfile.js'`.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 `src/lcu/lockfile.js`:
 
@@ -601,12 +601,12 @@ export function watchLockfileDir(path = DEFAULT_LOCKFILE_PATH, onChange = () => 
 
 The lockfile is deleted and recreated on restart, so watching the file itself would keep a handle on a dead inode — the directory is watched instead. `filename === null` is treated as a hit because some platforms omit it.
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `node --test tests/lockfile.test.js`
 Expected: PASS — 8 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lcu/lockfile.js tests/lockfile.test.js
@@ -631,7 +631,7 @@ git commit -m "feat: lockfile parsing and directory watching"
 
 `request()` never enforces the write allowlist — that is the tool layer's job (Task 13).
 
-- [ ] **Step 1: Vendor Riot's root CA**
+- [x] **Step 1: Vendor Riot's root CA**
 
 Run:
 
@@ -643,7 +643,7 @@ openssl x509 -in certs/riotgames.pem -noout -subject
 
 Expected: the subject contains `LoL Game Engineering Certificate Authority`. If the download fails, the same PEM ships inside the client install; do **not** proceed by disabling verification.
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 `tests/lcu-client.test.js`. The test exercises the pure builders plus a real HTTPS round-trip against a throwaway self-signed server, with that server's own cert passed as the pinned CA — this proves verification is genuinely on (a wrong CA must fail).
 
@@ -697,12 +697,12 @@ test('buildRequestOptions rejects a path without a leading slash', () => {
 });
 ```
 
-- [ ] **Step 3: Run the test to verify it fails**
+- [x] **Step 3: Run the test to verify it fails**
 
 Run: `node --test tests/lcu-client.test.js`
 Expected: FAIL — `Cannot find module '../src/lcu/client.js'`.
 
-- [ ] **Step 4: Write the implementation**
+- [x] **Step 4: Write the implementation**
 
 `src/lcu/client.js`:
 
@@ -844,7 +844,7 @@ export class LcuClient {
 
 `statusSnapshot()` returns the port but never the password.
 
-- [ ] **Step 5: Run the test to verify it passes**
+- [x] **Step 5: Run the test to verify it passes**
 
 Run: `node --test tests/lcu-client.test.js`
 Expected: PASS — 4 tests.
@@ -854,7 +854,7 @@ Expected: PASS — 4 tests.
 Run: `node -e "import('./src/lcu/client.js').then(async ({LcuClient}) => { const c = new LcuClient(); console.log(await c.get('/lol-gameflow/v1/gameflow-phase')); c.close(); })"`
 Expected: `{ status: 200, body: 'None' }` (or another phase string). A TLS error here means the vendored PEM is wrong — fix the PEM, never the verification setting. If League is not running, skip this step and note it.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add certs/riotgames.pem src/lcu/client.js tests/lcu-client.test.js
@@ -875,7 +875,7 @@ git commit -m "feat: LCU REST client with pinned Riot root CA"
 
 `dropped` is the number of entries that were evicted after the caller's `since` cursor — the signal that the stream has a gap. `filter` is a URI prefix applied at poll time (ingest-time filtering is Task 8).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `tests/buffer.test.js`:
 
@@ -959,12 +959,12 @@ test('clear empties the buffer but not the seq counter', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `node --test tests/buffer.test.js`
 Expected: FAIL — `Cannot find module '../src/lcu/buffer.js'`.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 `src/lcu/buffer.js`:
 
@@ -1012,12 +1012,12 @@ export class RingBuffer {
 
 Note the cursor rule: an empty page returns the caller's own `seq` so a poll loop never rewinds or skips. When a page is filtered, the cursor advances only to the last **returned** entry, so entries excluded by the filter are re-scanned on the next poll — correct, because filters can change between polls.
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `node --test tests/buffer.test.js`
 Expected: PASS — 9 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lcu/buffer.js tests/buffer.test.js
@@ -1036,7 +1036,7 @@ git commit -m "feat: event ring buffer with cursor and dropped accounting"
 - Consumes: nothing.
 - Produces: `MAX_DATA_BYTES` (4096), `matchesFilters(uri, filters) -> boolean` (empty or absent filters match everything), `truncateData(data, max = MAX_DATA_BYTES) -> { data, truncated }`, `decodeFrame(raw) -> { eventType, uri, data } | null` (returns `null` for empty frames, non-JSON, and any frame that is not `[8, "OnJsonApiEvent", payload]`).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `tests/ingest.test.js`:
 
@@ -1096,12 +1096,12 @@ test('decodeFrame returns null for junk and non-event frames', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `node --test tests/ingest.test.js`
 Expected: FAIL — `Cannot find module '../src/lcu/ingest.js'`.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 `src/lcu/ingest.js`:
 
@@ -1150,12 +1150,12 @@ export function decodeFrame(raw) {
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `node --test tests/ingest.test.js`
 Expected: PASS — 8 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lcu/ingest.js tests/ingest.test.js
@@ -1180,7 +1180,7 @@ git commit -m "feat: event ingest policy - prefix filters, truncation, frame dec
 
 Behaviour requirements from the spec: subscribe with `[5,"OnJsonApiEvent"]`; skip empty frames; apply filters **at ingest**; `start()` while already running replaces the filters and keeps the buffer; on unexpected close, reconnect with backoff and push a marker entry so the gap is visible.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `tests/events-tap.test.js`:
 
@@ -1320,12 +1320,12 @@ test('stop prevents further reconnects', async () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `node --test tests/events-tap.test.js`
 Expected: FAIL — `Cannot find module '../src/lcu/events.js'`.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 `src/lcu/events.js`:
 
@@ -1442,12 +1442,12 @@ export class LcuEventTap {
 
 The reconnect marker is pushed **after** a successful reconnect, so the buffer never fills with markers while the client is down.
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `node --test tests/events-tap.test.js`
 Expected: PASS — 8 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lcu/events.js tests/events-tap.test.js
@@ -1473,7 +1473,7 @@ git commit -m "feat: LCU event tap with ingest filters and backoff reconnect"
 
 The socket URL (`webSocketDebuggerUrl`) is `ws://127.0.0.1:<port>/devtools/page/<id>` and contains no secret — it is returned as-is. Only `url` embeds the LCU password.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `tests/cdp-discover.test.js`:
 
@@ -1563,12 +1563,12 @@ test('no page target yields a distinct explanation', async () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `node --test tests/cdp-discover.test.js`
 Expected: FAIL — `Cannot find module '../src/cdp/discover.js'`.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 `src/cdp/discover.js`:
 
@@ -1635,12 +1635,12 @@ export async function findPageTarget(port) {
 
 `err.cause?.code` is where `fetch` puts `ECONNREFUSED`; it goes into the parenthesised detail, never as the headline, so the message always leads with the actionable fix.
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `node --test tests/cdp-discover.test.js`
 Expected: PASS — 5 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/cdp/discover.js tests/cdp-discover.test.js
@@ -1661,7 +1661,7 @@ git commit -m "feat: CDP discovery with redacted targets and Pengu hint"
 
 `domQuery` is implemented on `Runtime.evaluate` with `returnByValue: true` and a fixed template — the selector is injected with `JSON.stringify`, so it takes no arbitrary code and is **not** gated by `allowEval`. `DOM.getDocument`/`DOM.querySelectorAll` also work (verified) but return node ids, which would need a second round-trip per property.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `tests/cdp-client.test.js`:
 
@@ -1778,12 +1778,12 @@ test('attach failure is reported as CDP unavailable', async () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `node --test tests/cdp-client.test.js`
 Expected: FAIL — `Cannot find module '../src/cdp/client.js'`.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 `src/cdp/client.js`:
 
@@ -1941,12 +1941,12 @@ export class CdpClient {
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `node --test tests/cdp-client.test.js`
 Expected: PASS — 8 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/cdp/client.js tests/cdp-client.test.js
@@ -1967,7 +1967,7 @@ git commit -m "feat: CDP client with evaluate and DOM query"
 
 Paths use `{placeholder}` for path parameters. This is the full list from the spec's "Curated endpoints" section — every entry there must appear.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `tests/curated.test.js`:
 
@@ -2022,12 +2022,12 @@ test('the table is immutable', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `node --test tests/curated.test.js`
 Expected: FAIL — `Cannot find module '../src/tools/curated.js'`.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 `src/tools/curated.js`. Transcribe the spec's list; `{id}` and `{puuid}` mark path parameters.
 
@@ -2092,12 +2092,12 @@ export function filterEndpoints(filter) {
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `node --test tests/curated.test.js`
 Expected: PASS — 6 tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/tools/curated.js tests/curated.test.js
@@ -2121,7 +2121,7 @@ git commit -m "feat: curated LCU endpoint table"
   - `ctx` shape, relied on by every later task: `{ config, lcu, cdp, buffer, tap, secrets() }` where `secrets()` returns the array of live secret strings to redact (`[password]` or `[]`).
   - `tests/helpers/context.js`: `fakeContext(overrides = {}) -> ctx` — the shared test double every later task's tests import. It is a helper module, not a test file, so it declares no tests.
 
-- [ ] **Step 1: Write the shared test helper**
+- [x] **Step 1: Write the shared test helper**
 
 `tests/helpers/context.js`. This is a plain module under `tests/helpers/`, not a test file — `node --test` only treats `*.test.js` as a suite, so it contributes no tests of its own. Every later task's tests import `fakeContext` from here.
 
@@ -2154,7 +2154,7 @@ export function fakeContext(overrides = {}) {
 }
 ```
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 `tests/tools-status.test.js`:
 
@@ -2218,12 +2218,12 @@ test('lol_status never leaks the password', async () => {
 });
 ```
 
-- [ ] **Step 3: Run the test to verify it fails**
+- [x] **Step 3: Run the test to verify it fails**
 
 Run: `node --test tests/tools-status.test.js`
 Expected: FAIL — `Cannot find module '../src/index.js'`.
 
-- [ ] **Step 4: Write the result helpers**
+- [x] **Step 4: Write the result helpers**
 
 `src/tools/result.js`:
 
@@ -2250,7 +2250,7 @@ export function guard(handler, ctx) {
 }
 ```
 
-- [ ] **Step 5: Write the status tool**
+- [x] **Step 5: Write the status tool**
 
 `src/tools/status.js`:
 
@@ -2288,7 +2288,7 @@ export function registerStatusTool(server, ctx) {
 }
 ```
 
-- [ ] **Step 6: Write the entry point**
+- [x] **Step 6: Write the entry point**
 
 `src/index.js`. All nine tools eventually register here, but the register functions for Tasks 13–16 do not exist yet, so this step wires `lol_status` only — each later task adds its own import and call, and extends the Step-2 name assertion by its own names. Registration order, as tasks land: status, passthrough, endpoints, events, dom.
 
@@ -2350,12 +2350,12 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1].rep
 
 The entry-point guard compares `import.meta.url` against `process.argv[1]` with backslashes normalised, because on Windows `argv[1]` is a `C:\...` path while `import.meta.url` is a `file:///C:/...` URL.
 
-- [ ] **Step 7: Run the tests to verify they pass**
+- [x] **Step 7: Run the tests to verify they pass**
 
 Run: `npm test`
 Expected: PASS — every suite, including the 5 tests in `tests/tools-status.test.js`.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add src/index.js src/tools/result.js src/tools/status.js src/lcu/client.js tests/helpers/context.js tests/tools-status.test.js
@@ -2377,7 +2377,7 @@ git commit -m "feat: MCP server skeleton with lol_status"
 
 `lol_request` is the single enforcement point for the write allowlist. A denied call returns `isError: true` with the paste-ready message from `checkWrite` and must **not** touch the client.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `tests/tools-passthrough.test.js`:
 
@@ -2485,12 +2485,12 @@ test('an LCU failure comes back as a tool error', async () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `node --test tests/tools-passthrough.test.js`
 Expected: FAIL — `Unknown tool: lol_get`.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 `src/tools/passthrough.js`:
 
@@ -2539,20 +2539,20 @@ export function registerPassthroughTools(server, ctx) {
 }
 ```
 
-- [ ] **Step 4: Register the tools**
+- [x] **Step 4: Register the tools**
 
 In `src/index.js`, add `import { registerPassthroughTools } from './tools/passthrough.js';` and call `registerPassthroughTools(server, ctx);` inside `createServer`, after `registerStatusTool`.
 
-- [ ] **Step 5: Update the tool-name assertion**
+- [x] **Step 5: Update the tool-name assertion**
 
 In `tests/tools-status.test.js`, change the expected list to `['lol_get', 'lol_request', 'lol_status']` (sorted).
 
-- [ ] **Step 6: Run the tests to verify they pass**
+- [x] **Step 6: Run the tests to verify they pass**
 
 Run: `npm test`
 Expected: PASS — including the 6 tests in `tests/tools-passthrough.test.js`.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/tools/passthrough.js src/index.js tests/tools-passthrough.test.js tests/tools-status.test.js
@@ -2572,7 +2572,7 @@ git commit -m "feat: lol_get and lol_request with write allowlist enforcement"
 - Consumes: `ENDPOINTS`, `GROUPS`, `filterEndpoints` (Task 11), `ok`/`guard` (Task 12).
 - Produces: `registerEndpointsTool(server, ctx)` registering `lol_endpoints({ filter? })`, returning `{ total, matched, groups, endpoints }`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `tests/tools-endpoints.test.js`:
 
@@ -2622,12 +2622,12 @@ test('a filter matching nothing returns an empty list, not an error', async () =
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `node --test tests/tools-endpoints.test.js`
 Expected: FAIL — `Unknown tool: lol_endpoints`.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 `src/tools/endpoints.js`:
 
@@ -2657,20 +2657,20 @@ export function registerEndpointsTool(server, ctx) {
 }
 ```
 
-- [ ] **Step 4: Register the tool**
+- [x] **Step 4: Register the tool**
 
 In `src/index.js`, import `registerEndpointsTool` and call it after `registerPassthroughTools`.
 
-- [ ] **Step 5: Update the tool-name assertion**
+- [x] **Step 5: Update the tool-name assertion**
 
 In `tests/tools-status.test.js`, expect `['lol_endpoints', 'lol_get', 'lol_request', 'lol_status']`.
 
-- [ ] **Step 6: Run the tests to verify they pass**
+- [x] **Step 6: Run the tests to verify they pass**
 
 Run: `npm test`
 Expected: PASS — including the 3 tests in `tests/tools-endpoints.test.js`.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/tools/endpoints.js src/index.js tests/tools-endpoints.test.js tests/tools-status.test.js
@@ -2695,7 +2695,7 @@ git commit -m "feat: lol_endpoints tool over the curated table"
 
 `since` defaults to 0, `limit` defaults to 100 (max 500). Restarting is not an error. Polling while stopped is not an error either — buffered entries are still drained.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `tests/tools-events.test.js`:
 
@@ -2828,12 +2828,12 @@ test('limit above the cap is rejected by schema validation', async () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `node --test tests/tools-events.test.js`
 Expected: FAIL — `Unknown tool: lol_events_start`.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 `src/tools/events.js`:
 
@@ -2907,20 +2907,20 @@ export function registerEventTools(server, ctx) {
 }
 ```
 
-- [ ] **Step 4: Register the tools**
+- [x] **Step 4: Register the tools**
 
 In `src/index.js`, import `registerEventTools` and call it after `registerEndpointsTool`.
 
-- [ ] **Step 5: Update the tool-name assertion**
+- [x] **Step 5: Update the tool-name assertion**
 
 In `tests/tools-status.test.js`, expect `['lol_endpoints', 'lol_events_poll', 'lol_events_start', 'lol_events_stop', 'lol_get', 'lol_request', 'lol_status']`.
 
-- [ ] **Step 6: Run the tests to verify they pass**
+- [x] **Step 6: Run the tests to verify they pass**
 
 Run: `npm test`
 Expected: PASS — including the 7 tests in `tests/tools-events.test.js`.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/tools/events.js src/index.js tests/tools-events.test.js tests/tools-status.test.js
@@ -2942,7 +2942,7 @@ git commit -m "feat: event start/poll/stop tools"
 
 `lol_eval` is refused with a clear message when `allowEval` is false. `lol_dom_query` is **not** gated — it injects the selector as data.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 `tests/tools-dom.test.js`:
 
@@ -3040,12 +3040,12 @@ test('a CDP outage surfaces the Pengu fix, not a socket error', async () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `node --test tests/tools-dom.test.js`
 Expected: FAIL — `Unknown tool: lol_dom_query`.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 `src/tools/dom.js`:
 
@@ -3101,11 +3101,11 @@ export function registerDomTools(server, ctx) {
 }
 ```
 
-- [ ] **Step 4: Register the tools**
+- [x] **Step 4: Register the tools**
 
 In `src/index.js`, import `registerDomTools` and call it last inside `createServer`.
 
-- [ ] **Step 5: Restore the full tool-name assertion**
+- [x] **Step 5: Restore the full tool-name assertion**
 
 In `tests/tools-status.test.js`, extend the expected list to the full nine names, sorted:
 
@@ -3123,12 +3123,12 @@ In `tests/tools-status.test.js`, extend the expected list to the full nine names
   ]);
 ```
 
-- [ ] **Step 6: Run the whole suite**
+- [x] **Step 6: Run the whole suite**
 
 Run: `npm test`
 Expected: PASS — every suite, including the 5 tests in `tests/tools-dom.test.js` and the full nine-tool assertion.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/tools/dom.js src/index.js tests/tools-dom.test.js tests/tools-status.test.js
@@ -3147,7 +3147,7 @@ git commit -m "feat: lol_dom_query and lol_eval with allowEval gate"
 - Consumes: everything built above, through the public exports.
 - Produces: `npm run smoke`, exiting 0 when every stage passes and 1 with a per-stage report otherwise.
 
-- [ ] **Step 1: Write the smoke script**
+- [x] **Step 1: Write the smoke script**
 
 `scripts/smoke.mjs`:
 
@@ -3240,7 +3240,7 @@ if (failed.length > 0) {
 Run: `npm run smoke`
 Expected: all 7 stages PASS with League running and Pengu active. If the CDP stages fail, apply the hint the script prints and rerun. If League is not running, this step cannot be completed — say so explicitly rather than marking it done.
 
-- [ ] **Step 3: Write the README**
+- [x] **Step 3: Write the README**
 
 `README.md` must cover, in this order:
 
@@ -3273,17 +3273,17 @@ claude mcp add lcu --scope user -- node C:\\Users\\DELL\\Desktop\\lcu-mcp\\src\\
 8. Security — TLS verification is on with a pinned CA; the password is never returned or logged; `lol_eval` bypasses the write allowlist by construction and is gated by `allowEval`.
 9. Testing — `npm test` (no client needed) and `npm run smoke` (live, manual).
 
-- [ ] **Step 4: Verify the server starts as a real MCP process**
+- [x] **Step 4: Verify the server starts as a real MCP process**
 
 Run: `echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"smoke","version":"0"}}}' | node src/index.js`
 Expected: a single JSON-RPC response line advertising `serverInfo.name === "lcu-mcp"`. Nothing must be written to stdout except JSON-RPC — any stray `console.log` in stdio mode corrupts the protocol.
 
-- [ ] **Step 5: Full verification**
+- [x] **Step 5: Full verification**
 
 Run: `npm test`
 Expected: PASS, all suites, zero failures.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add scripts/smoke.mjs README.md
@@ -3291,6 +3291,13 @@ git commit -m "feat: live smoke script and README"
 ```
 
 ---
+
+
+> **Status 2026-08-23:** Tasks 1-17 implemented; `npm test` is green (120 tests).
+> The two steps above that need a running League client are still unchecked: the client
+> was not running, so `npm run smoke` reported 0/7 stages (every stage failed on the
+> missing lockfile / closed CDP port, which is the expected error path, not a defect).
+> Re-run `npm run smoke` with League open, and Pengu active for the CDP stages.
 
 ## Self-Review Notes
 
