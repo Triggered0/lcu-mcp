@@ -33,7 +33,7 @@ test('guard redacts secrets out of thrown messages', async () => {
 test('the server registers exactly the tools wired so far', async () => {
   const { client } = await connect(fakeContext());
   const names = (await client.listTools()).tools.map((t) => t.name).sort();
-  assert.deepEqual(names, ['lol_status']);
+  assert.deepEqual(names, ['lol_get', 'lol_request', 'lol_status']);
   await client.close();
 });
 
