@@ -39,6 +39,8 @@ target selection are sufficient in the interim:
 | One timeline, `kind`-discriminated | "The socket died" is only an answer if the close code sits next to the last event that got through. |
 | Console tailer gets its own `CdpClient` | An aggressive reconnect supervisor must not destabilise `lol_eval` / `lol_dom_query`. |
 | Console buffer is one timeline tagged with `targetId` | Re-attach across a renderer reload is the point. A map keyed by target means five reloads need five ids to reconstruct one session; per-target becomes a dump filter instead. |
+| Explicit console `start`/`tail`/`stop`, no auto-start | The first call that reads the buffer happens *after* the game, so auto-start would begin buffering exactly when it is too late and return an empty buffer that reads as "the page logged nothing". |
+| `decodeFrame` is not generalised; parsing is extracted | `tests/ingest.test.js:12` asserts the exact behaviour a generalisation loosens. Keeping the contract byte-identical means the tap's safety is proven by untouched tests. |
 | No new `cdp_eval` tool | `lol_eval` already does `Runtime.evaluate` with `returnByValue` + `awaitPromise`. A `targetId` parameter is the only real difference; a second tool would be duplication. |
 
 ## The shared clock
@@ -62,10 +64,23 @@ is immune to an NTP step mid-session (which plain `Date.now()` is not).
 range-filters on. A monotonic `seq` sits alongside it for ordering *within*
 the process, but it is not the clock.
 
-CDP's `Runtime.consoleAPICalled.timestamp` is already epoch milliseconds, so
-page-side console entries land on the same axis with no conversion. Console
-entries carry both `ts` (the page's stamp) and `recvTs` (ours); the delta
-between them is itself a delivery-latency signal.
+### Both stamps on both sides
+
+Every entry, recorder and console alike, carries two receive-side stamps:
+
+- `ts` — the anchored clock above: sub-millisecond, NTP-step-immune.
+- `wallTs` — a raw `Date.now()` taken at the same instant.
+
+Console entries additionally carry `pageTs`, CDP's
+`Runtime.consoleAPICalled.timestamp`, which is already epoch milliseconds and
+so needs no conversion. The `ts`/`pageTs` delta is itself a delivery-latency
+signal.
+
+The anchored clock's immunity to an NTP step is exactly why the raw stamp has
+to travel with it. CDP's timestamp is *raw* epoch, so under the very step the
+anchoring protects against, the two clocks disagree — and the whole design is
+about correlating across them. Carrying both fields on both sides makes that
+disagreement visible in the data instead of load-bearing and invisible.
 
 ## Component A — WAMP recorder
 
@@ -81,15 +96,17 @@ inferred from the first frame's timestamp.
 `mode` is `'firehose'` or `'uris'`. `reason` on `stop` is `'tool'` (an explicit
 `lol_wamp_record_stop`) or `'shutdown'` (the MCP process exiting).
 
+All entries carry `ts`, `wallTs` and `seq`; the fields below are in addition.
+
 ```
-{ kind:'start',   ts, seq, uris, mode, bufferSize, maxBytes, payloadCap }
-{ kind:'stop',    ts, seq, reason }
-{ kind:'restart', ts, seq, previousStartedAt, previousEntries }
-{ kind:'open',    ts, seq, port, attempt }
-{ kind:'close',   ts, seq, code, reason, wasClean }
-{ kind:'error',   ts, seq, message }
-{ kind:'gap',     ts, seq, durationMs, sinceTs }
-{ kind:'event',   ts, seq, uri, eventType, endpoint, data, truncated }
+{ kind:'start',   uris, mode, bufferSize, maxBytes, payloadCap }
+{ kind:'stop',    reason }
+{ kind:'restart', previousStartedAt, previousEntries }
+{ kind:'open',    port, attempt }
+{ kind:'close',   code, reason, wasClean }
+{ kind:'error',   message }
+{ kind:'gap',     durationMs, sinceTs }
+{ kind:'event',   uri, eventType, endpoint, data, truncated }
 ```
 
 ### Subscription
@@ -99,10 +116,35 @@ subscribe frame per URI, with `/` replaced by `_`:
 `/lol-gameflow/v1/gameflow-phase` becomes
 `[5, "OnJsonApiEvent_lol-gameflow_v1_gameflow-phase"]`.
 
-`decodeFrame` in `src/lcu/ingest.js` currently hardcodes
-`frame[1] !== 'OnJsonApiEvent'` and must be generalised to accept any
-`OnJsonApiEvent*` endpoint, returning the endpoint alongside the payload.
-`LcuEventTap`'s existing behaviour must not change.
+`decodeFrame` in `src/lcu/ingest.js` hardcodes `frame[1] !== 'OnJsonApiEvent'`.
+It must **not** be generalised. `tests/ingest.test.js:12` deliberately asserts
+the behaviour a generalisation would loosen:
+
+```js
+assert.equal(decodeFrame(JSON.stringify([8, 'OnJsonApiEvent_x', { uri: '/x' }])), null);
+```
+
+Generalising therefore does not risk a *silent* regression — it turns that test
+red immediately. The hazard is that the obvious way to make it green again is
+to weaken or delete the one assertion protecting `LcuEventTap`.
+
+Extract the shared parsing instead:
+
+```
+parseWampFrame(raw) -> { endpoint, payload } | null
+    text/Buffer -> JSON -> Array -> frame[0] === 8 -> payload is an object
+
+decodeFrame(raw)       // unchanged contract, firehose only:
+                       // endpoint must equal 'OnJsonApiEvent'
+decodeEventFrame(raw)  // recorder: accepts OnJsonApiEvent*, returns endpoint
+```
+
+`decodeFrame`'s observable behaviour stays byte-identical and
+`tests/ingest.test.js` is not touched at all, so "the tap did not regress" is
+proven by untouched tests rather than edited ones. On the one function both
+subsystems sit on, that is worth a six-line helper. The two consumers want
+different return shapes anyway — the recorder needs the endpoint, the tap does
+not.
 
 ### Per-URI statistics
 
@@ -196,12 +238,13 @@ behaviour is unchanged.
 
 ### Buffering
 
-`Runtime.enable` on attach, then buffer:
+`Runtime.enable` on attach, then buffer. As with the recorder, every entry
+carries `ts`, `wallTs` and `seq`:
 
 ```
-{ kind:'console',   ts, recvTs, seq, targetId, level, args, stackTop, url }
-{ kind:'exception', ts, recvTs, seq, targetId, text, description, stackTop, url }
-{ kind:'reattach',  ts, seq, previousTargetId, targetId, gapMs }
+{ kind:'console',   pageTs, targetId, level, args, stackTop, url }
+{ kind:'exception', pageTs, targetId, text, description, stackTop, url }
+{ kind:'reattach',  previousTargetId, targetId, gapMs }
 ```
 
 `consoleAPICalled` delivers `RemoteObject` arguments. Deep-serialising them is
@@ -218,14 +261,32 @@ the target id changes. On socket close or `Inspector.targetCrashed`, poll
 `Runtime.enable`, and push a `reattach` entry recording the old and new target
 ids and the gap. Buffering continues in the background between tool calls.
 
-### Tool
+### Tools
 
-`lol_cdp_console_tail({ since?, until?, cursor?, limit?, level?, targetId?, text?, stop? })`
+- `lol_cdp_console_start()`
+- `lol_cdp_console_tail({ since?, until?, cursor?, limit?, level?, targetId?, text? })`
+- `lol_cdp_console_stop()`
 
-Auto-starts on first call — forgetting to start the tailer and losing the game
-is precisely the failure mode being debugged, and `Runtime.enable` plus one
-socket is cheap. `stop: true` is the escape hatch. Returns
-`{ entries, cursor, dropped, running, attached, targetId, startedAt }`.
+An explicit triple, matching the other nine tools. **Tailing a stopped tailer
+is an error, not an empty success.**
+
+Auto-starting on first call was considered and rejected. It does not do what it
+appears to: the tailer exists to capture an unattended 40-minute game, but the
+first call that *reads* the buffer happens after the game. If that read is also
+the first call, auto-start begins buffering at the moment one sits down to
+review what was missed, and returns an empty buffer. Capturing the game still
+requires a call beforehand — auto-start removes the word "start" from the
+workflow, not the requirement.
+
+It also makes forgetting silent. `{ entries: [], running: true }` reads as "the
+page logged nothing" when the truth is "nothing was listening." That is the
+same silence-by-absence versus silence-by-something-else confusion the recorder
+avoids by always reporting `dropped`, and the console tailer must not
+reintroduce it. A loud error at the moment it matters beats a plausible-looking
+empty result — the same reasoning that makes a second `start` an error.
+
+The second CDP socket then exists only for the duration of an explicit session,
+which disposes of the resource objection too.
 
 `level` filters console entries by severity (`log`, `warning`, `error`, …);
 `text` is a case-insensitive substring match over the rendered arguments and
@@ -293,21 +354,32 @@ live client required:
   event that got through; `gap` duration measured from `close` to reconnect.
 - `start` while running errors and reports `startedAt` plus entry count;
   `restart: true` drops the buffer and opens a fresh socket.
-- Firehose vs per-URI subscribe frame construction; `decodeFrame`
-  generalisation leaves `LcuEventTap` unaffected.
+- Firehose vs per-URI subscribe frame construction. `tests/ingest.test.js` must
+  remain **untouched and green** — that is the regression check for
+  `LcuEventTap`, and editing it would defeat the purpose of the extraction.
+  New tests cover `parseWampFrame` and `decodeEventFrame` only.
 - Console re-attach across a target-id change emits `reattach` and keeps
   buffering.
+- `lol_cdp_console_tail` against a stopped tailer errors rather than returning
+  an empty success.
 - Redaction: a password in a console argument, an `exceptionDetails` text and
   a recorder `error` never reaches the buffer or the NDJSON file.
-- Clock: `ts` is epoch-comparable and monotonic under a simulated wall-clock
-  step.
+- Clock: under a simulated wall-clock step, `ts` stays monotonic while `wallTs`
+  jumps, and both are present on recorder and console entries alike.
+- `tests/tools-status.test.js` asserts the exact registered tool set ("the
+  server registers exactly the tools wired so far") and must be extended as
+  each tool lands.
 
 ## Phasing
 
-1. `lol_wamp_record_*` — recorder, dual-budget buffer, lifecycle timeline,
-   per-URI stats, reconnect.
-2. `lol_cdp_console_tail` — `CdpClient` event dispatch, tailer, re-attach
-   supervisor.
-3. `exceptionDetails` on `lol_eval`.
-4. `wampRecordFile` NDJSON durability.
+1. `lol_wamp_record_*` — `parseWampFrame` extraction, recorder, dual-budget
+   buffer, lifecycle timeline, per-URI stats, reconnect.
+2. `lol_cdp_console_start/tail/stop` — `CdpClient` event dispatch, tailer,
+   re-attach supervisor.
+3. `wampRecordFile` NDJSON durability.
+4. `exceptionDetails` on `lol_eval`.
 5. Deferred: `lol_cdp_targets`, Pengu config port read.
+
+Durability comes before `exceptionDetails`: it is the difference between losing
+a game session and not, whereas structured exception details can be worked
+around with a `try/catch` inside the evaluated expression.
