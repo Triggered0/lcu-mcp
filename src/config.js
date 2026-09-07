@@ -5,7 +5,13 @@ export const DEFAULTS = {
   allowEval: true,
   cdpPort: 8888,
   eventBufferSize: 1000,
-  writeAllowlist: []
+  writeAllowlist: [],
+  wampRecordBufferSize: 20000,
+  wampRecordMaxBytes: 67_108_864,
+  wampRecordPayloadCap: 512,
+  wampRecordFullPayloadUris: ['/lol-gameflow/v1/gameflow-phase'],
+  wampRecordFile: null,
+  cdpConsoleBufferSize: 5000
 };
 
 export function validateConfig(raw) {
@@ -21,6 +27,20 @@ export function validateConfig(raw) {
   }
   if (!Number.isInteger(config.eventBufferSize) || config.eventBufferSize < 1) {
     throw new Error(`Config "eventBufferSize" must be a positive integer, got ${JSON.stringify(config.eventBufferSize)}`);
+  }
+  for (const key of ['wampRecordBufferSize', 'wampRecordMaxBytes', 'wampRecordPayloadCap', 'cdpConsoleBufferSize']) {
+    if (!Number.isInteger(config[key]) || config[key] < 1) {
+      throw new Error(`Config "${key}" must be a positive integer, got ${JSON.stringify(config[key])}`);
+    }
+  }
+  if (
+    !Array.isArray(config.wampRecordFullPayloadUris) ||
+    config.wampRecordFullPayloadUris.some((u) => typeof u !== 'string')
+  ) {
+    throw new Error('Config "wampRecordFullPayloadUris" must be an array of URI prefix strings');
+  }
+  if (config.wampRecordFile !== null && typeof config.wampRecordFile !== 'string') {
+    throw new Error(`Config "wampRecordFile" must be a path string or null, got ${typeof config.wampRecordFile}`);
   }
   if (!Array.isArray(config.writeAllowlist) || config.writeAllowlist.some((e) => typeof e !== 'string')) {
     throw new Error('Config "writeAllowlist" must be an array of "METHOD /path" strings');

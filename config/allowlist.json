@@ -2,6 +2,12 @@
   "allowEval": true,
   "cdpPort": 8888,
   "eventBufferSize": 1000,
+  "wampRecordBufferSize": 20000,
+  "wampRecordMaxBytes": 67108864,
+  "wampRecordPayloadCap": 512,
+  "wampRecordFullPayloadUris": ["/lol-gameflow/v1/gameflow-phase"],
+  "wampRecordFile": null,
+  "cdpConsoleBufferSize": 5000,
   "writeAllowlist": [
     "POST /lol-matchmaking/v1/ready-check/accept",
     "POST /lol-lobby/v2/lobby/matchmaking/search"
