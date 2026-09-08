@@ -305,3 +305,29 @@ test('a password never reaches the timeline through an error entry', async () =>
   assert.ok(text.includes('***'));
   h.recorder.stop();
 });
+
+test('every timeline entry is mirrored to the sink when one is configured', async () => {
+  const written = [];
+  const h = harness();
+  h.recorder.attachSink({ write: (entry) => { written.push(entry); return true; }, close() {}, disabled: false });
+
+  const socket = await started(h);
+  socket.emit('message', frame('/lol-gameflow/v1/gameflow-phase'));
+  h.recorder.stop();
+
+  const kinds = written.map((e) => e.kind);
+  assert.ok(kinds.includes('start'));
+  assert.ok(kinds.includes('open'));
+  assert.ok(kinds.includes('event'));
+  assert.ok(kinds.includes('stop'));
+  assert.ok(written.every((e) => typeof e.seq === 'number' && typeof e.ts === 'number'));
+});
+
+test('a sink failure records an error entry and never stops the recording', async () => {
+  const h = harness();
+  h.recorder.attachSink({ write: () => false, close() {}, disabled: true });
+  const socket = await started(h);
+  socket.emit('message', frame('/a'));
+  assert.equal(h.recorder.statusSnapshot().running, true, 'the recording continues');
+  h.recorder.stop();
+});

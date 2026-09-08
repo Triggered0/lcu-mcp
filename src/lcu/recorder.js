@@ -31,6 +31,7 @@ export class WampRecorder {
   // locked out and without the orphan clearing a flag its successor holds.
   #reconnectOwner = null;
   #lastCloseTs = null;
+  #sink = null;
 
   constructor({ client, config, wsFactory, delay = sleep, clock = createClock() }) {
     this.client = client;
@@ -74,9 +75,9 @@ export class WampRecorder {
     // The restart entry is the first entry of the NEW buffer, so what was
     // discarded is itself on the record.
     if (wasRunning) {
-      this.#buffer.push({ kind: 'restart', previousStartedAt, previousEntries });
+      this.#push({ kind: 'restart', previousStartedAt, previousEntries });
     }
-    this.#buffer.push({
+    this.#push({
       kind: 'start',
       uris: this.#uris,
       mode: this.#mode,
@@ -125,7 +126,7 @@ export class WampRecorder {
       throw err;
     }
 
-    this.#buffer.push({ kind: 'open', port: creds.port, attempt });
+    this.#push({ kind: 'open', port: creds.port, attempt });
     // Registered only now that the socket is live: before the handshake
     // completes a close *is* the failure that rejects the promise above.
     socket.on('close', (code, reason) => this.#onClose(socket, code, reason));
@@ -137,7 +138,7 @@ export class WampRecorder {
 
   #onClose(socket, code, reason) {
     if (!this.#running || socket !== this.#socket) return;
-    const stored = this.#buffer.push({
+    const stored = this.#push({
       kind: 'close',
       code: code ?? null,
       reason: reason ? String(reason) : '',
@@ -165,10 +166,10 @@ export class WampRecorder {
           await this.#connect(attempt + 1);
         } catch (err) {
           this.#lastError = this.#redact(`reconnect failed: ${errorMessage(err)}`);
-          this.#buffer.push({ kind: 'error', message: this.#lastError });
+          this.#push({ kind: 'error', message: this.#lastError });
           continue;
         }
-        this.#buffer.push({
+        this.#push({
           kind: 'gap',
           durationMs: sinceTs === null ? null : this.clock.now() - sinceTs,
           sinceTs
@@ -180,12 +181,24 @@ export class WampRecorder {
     }
   }
 
+  attachSink(sink) {
+    this.#sink = sink;
+  }
+
+  // One choke point so that no entry can reach the buffer without also
+  // reaching the file, and vice versa.
+  #push(entry) {
+    const stored = this.#buffer.push(entry);
+    this.#sink?.write(stored);
+    return stored;
+  }
+
   #record(socket, entry) {
     // A superseded or stopped socket keeps emitting for a while. Without this
     // identity check its frames land in the buffer too, so one LCU event is
     // recorded once per orphaned socket and stop() does not stop the recorder.
     if (!this.#running || socket !== this.#socket) return;
-    this.#buffer.push(entry);
+    this.#push(entry);
   }
 
   #ingest(socket, raw) {
@@ -198,7 +211,7 @@ export class WampRecorder {
     // the rest is what makes the firehose affordable.
     const cap = this.#payloadCapFor(event.uri);
     const { data, truncated } = truncateData(event.data, cap);
-    const stored = this.#buffer.push({
+    const stored = this.#push({
       kind: 'event',
       uri: event.uri,
       eventType: event.eventType,
@@ -274,7 +287,7 @@ export class WampRecorder {
     this.#closeQuietly(socket);
     // Pushed after #running is false so the identity-checked #record path
     // cannot also fire for the close this triggers.
-    this.#buffer.push({ kind: 'stop', reason });
+    this.#push({ kind: 'stop', reason });
     return { stopped: true, entries: this.#buffer.length };
   }
 

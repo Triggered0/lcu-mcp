@@ -7,6 +7,7 @@ import { RingBuffer } from './lcu/buffer.js';
 import { LcuEventTap } from './lcu/events.js';
 import { CdpClient } from './cdp/client.js';
 import { WampRecorder } from './lcu/recorder.js';
+import { NdjsonSink } from './lcu/ndjson.js';
 import { ConsoleTailer } from './cdp/console.js';
 import { registerStatusTool } from './tools/status.js';
 import { registerPassthroughTools } from './tools/passthrough.js';
@@ -23,6 +24,9 @@ export function buildContext({ env = process.env } = {}) {
   const tap = new LcuEventTap({ client: lcu, buffer });
   const cdp = new CdpClient({ port: config.cdpPort });
   const recorder = new WampRecorder({ client: lcu, config });
+  if (config.wampRecordFile) {
+    recorder.attachSink(new NdjsonSink({ path: config.wampRecordFile }));
+  }
   // Its own CDP socket: the tailer's re-attach supervisor must not be able to
   // destabilise the shared client that lol_eval and lol_dom_query use.
   const consoleCdp = new CdpClient({ port: config.cdpPort });
