@@ -97,6 +97,11 @@ claude mcp add lcu --scope user -- node C:\path\to\lcu-mcp\src\index.js
 | `lol_cdp_console_start()` | Begin buffering client console output |
 | `lol_cdp_console_tail(since?, until?, cursor?, limit?, level?, targetId?, text?)` | Read buffered console entries |
 | `lol_cdp_console_stop()` | Stop and discard the console buffer |
+| `lol_restart_ux(waitForReady?, timeoutSeconds?)` | Safely restart client CEF renderers with readiness polling |
+| `lol_cdp_targets()` | List all active CDP debugging targets (pages, popups, workers) |
+| `lol_cdp_screenshot(targetId?, format?, quality?, savePath?)` | Capture client screenshot via CDP (returns MCP image + disk save) |
+| `lol_schema(path?, method?, model?, refresh?)` | Query internal LCU OpenAPI/Swagger v2 schemas and models |
+| `lol_forensics_correlate(since?, until?, limit?, uriPrefix?, levels?, format?)` | Correlate WAMP recorder and CDP console timelines on a shared time axis |
 
 **`lol_status` first.** When anything else fails it tells you which half is down — a closed client looks nothing like a missing Pengu install.
 
