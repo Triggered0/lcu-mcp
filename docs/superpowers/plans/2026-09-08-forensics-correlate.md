@@ -44,9 +44,9 @@
 - Produces: `registerForensicsTools(server, ctx)` in `src/tools/forensics.js`.
 - Updates tool count to 20 tools.
 
-- [ ] **Step 1: Write failing tests in `tests/tools-forensics.test.js`**
-- [ ] **Step 2: Run tests to verify failure**
-- [ ] **Step 3: Implement `src/tools/forensics.js` and wire in `src/index.js`**
-- [ ] **Step 4: Run tests to verify pass**
-- [ ] **Step 5: Run full test suite (`npm test`)**
-- [ ] **Step 6: Commit changes**
+- [x] **Step 1: Write failing tests in `tests/tools-forensics.test.js`**
+- [x] **Step 2: Run tests to verify failure**
+- [x] **Step 3: Implement `src/tools/forensics.js` and wire in `src/index.js`**
+- [x] **Step 4: Run tests to verify pass**
+- [x] **Step 5: Run full test suite (`npm test`)**
+- [x] **Step 6: Commit changes**
