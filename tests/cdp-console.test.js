@@ -187,3 +187,90 @@ test('renderArg caps a very long argument', () => {
   assert.ok(rendered.length < 600, `rendered length ${rendered.length} should be capped`);
   assert.match(rendered, /truncated/);
 });
+
+test('a disconnect re-attaches and records the reattach with both target ids', async () => {
+  const { cdp, tailer } = harness();
+  await tailer.start();
+  cdp.emit('Runtime.consoleAPICalled', consoleEvent({ args: [{ type: 'string', value: 'before' }] }));
+
+  cdp.target.id = 'PAGE-2'; // the renderer reloaded under us
+  cdp.emitClose();
+  await new Promise((r) => setImmediate(r));
+  await new Promise((r) => setImmediate(r));
+
+  cdp.emit('Runtime.consoleAPICalled', consoleEvent({ args: [{ type: 'string', value: 'after' }] }));
+
+  const { entries } = tailer.tail({ limit: 100 });
+  const reattach = entries.find((e) => e.kind === 'reattach');
+  assert.ok(reattach, 'a reattach entry was recorded');
+  assert.equal(reattach.previousTargetId, 'PAGE-1');
+  assert.equal(reattach.targetId, 'PAGE-2');
+  assert.ok(reattach.gapMs >= 0);
+
+  const args = entries.filter((e) => e.kind === 'console').map((e) => e.args);
+  assert.deepEqual(args, ['before', 'after'], 'buffering continued across the reload');
+  tailer.stop();
+});
+
+test('Runtime.enable is re-issued on the new socket', async () => {
+  const { cdp, tailer } = harness();
+  await tailer.start();
+  const before = cdp.sent.filter((s) => s.method === 'Runtime.enable').length;
+  cdp.emitClose();
+  await new Promise((r) => setImmediate(r));
+  await new Promise((r) => setImmediate(r));
+  assert.equal(cdp.sent.filter((s) => s.method === 'Runtime.enable').length, before + 1);
+  tailer.stop();
+});
+
+test('a reattach survives a level filter that would exclude everything else', async () => {
+  const { cdp, tailer } = harness();
+  await tailer.start();
+  cdp.emit('Runtime.consoleAPICalled', consoleEvent({ type: 'log' }));
+  cdp.emitClose();
+  await new Promise((r) => setImmediate(r));
+  await new Promise((r) => setImmediate(r));
+
+  const { entries } = tailer.tail({ level: 'error', limit: 100 });
+  assert.ok(entries.some((e) => e.kind === 'reattach'), 'the reload is context, not noise');
+  tailer.stop();
+});
+
+test('a failed re-attach retries and does not lose the tailer', async () => {
+  const { cdp, tailer } = harness();
+  await tailer.start();
+  let failures = 0;
+  const realAttach = cdp.attach;
+  cdp.attach = async () => {
+    failures += 1;
+    if (failures === 1) throw new Error('CDP unavailable on port 8888');
+    return realAttach.call(cdp);
+  };
+  cdp.emitClose();
+  for (let i = 0; i < 6; i += 1) await new Promise((r) => setImmediate(r));
+
+  assert.ok(failures >= 2, 'the supervisor retried');
+  assert.equal(tailer.statusSnapshot().running, true);
+  tailer.stop();
+});
+
+test('stop orphans an in-flight re-attach loop', async () => {
+  const cdp = fakeCdp();
+  let release;
+  const tailer = new ConsoleTailer({
+    cdp,
+    config: { cdpConsoleBufferSize: 100 },
+    clock: fakeClock(),
+    delay: () => new Promise((r) => { release = r; })
+  });
+  await tailer.start();
+  const before = cdp.sent.length;
+  cdp.emitClose();
+  await new Promise((r) => setImmediate(r));
+
+  tailer.stop();
+  release();
+  await new Promise((r) => setImmediate(r));
+
+  assert.equal(cdp.sent.length, before, 'nothing was sent after stop');
+});

@@ -40,6 +40,7 @@ export class ConsoleTailer {
   #unsubscribe = [];
   #reconnectOwner = null;
   #lastError = null;
+  #lastDisconnectTs = null;
 
   constructor({ cdp, config, secrets = () => [], clock = createClock(), delay = sleep }) {
     this.cdp = cdp;
@@ -116,8 +117,45 @@ export class ConsoleTailer {
     });
   }
 
-  // Task 10 replaces this with the re-attach supervisor.
-  #onDisconnect() {}
+  #onDisconnect() {
+    if (!this.#running) return;
+    this.#lastDisconnectTs = this.clock.now();
+    // Fire and forget: no MCP call is waiting on this.
+    this.#reattach();
+  }
+
+  // The renderer reloading changes the target id, which is exactly when the
+  // interesting thing happens. Without this the tailer goes deaf at the worst
+  // possible moment, and the empty buffer reads as "the page logged nothing".
+  async #reattach() {
+    if (this.#reconnectOwner !== null) return;
+    const owner = Symbol('reattach');
+    this.#reconnectOwner = owner;
+    const previousTargetId = this.#targetId;
+    const sinceTs = this.#lastDisconnectTs;
+    try {
+      for (let attempt = 0; this.#running && this.#reconnectOwner === owner; attempt += 1) {
+        await this.delay(backoffDelay(attempt));
+        if (!this.#running || this.#reconnectOwner !== owner) return;
+        try {
+          await this.#enable();
+        } catch (err) {
+          this.#lastError = this.#redact(err instanceof Error ? err.message : String(err));
+          continue;
+        }
+        this.#buffer.push({
+          kind: 'reattach',
+          previousTargetId,
+          targetId: this.#targetId,
+          gapMs: sinceTs === null ? null : this.clock.now() - sinceTs
+        });
+        this.#lastError = null;
+        return;
+      }
+    } finally {
+      if (this.#reconnectOwner === owner) this.#reconnectOwner = null;
+    }
+  }
 
   tail({ cursor = 0, since = null, until = null, limit = 100, level = null, targetId = null, text = null } = {}) {
     if (!this.#running) {
