@@ -275,3 +275,69 @@ test('CdpClient re-resolves port on reconnect retry if initial connect fails', a
   assert.equal(client.statusSnapshot().port, 2222);
   client.close();
 });
+
+test('captureScreenshot sends Page.enable and Page.captureScreenshot and returns base64 data and default format', async () => {
+  const { client, sockets } = harness();
+  await client.attach();
+  sockets[0].responder = (msg) => {
+    if (msg.method === 'Page.enable') return { result: {} };
+    if (msg.method === 'Page.captureScreenshot') {
+      assert.equal(msg.params.format, 'png');
+      return { result: { data: 'BASE64PNGDATA' } };
+    }
+    return null;
+  };
+  const result = await client.captureScreenshot();
+  assert.deepEqual(result, { data: 'BASE64PNGDATA', format: 'png' });
+  assert.ok(sockets[0].sent.some((m) => m.method === 'Page.enable'));
+  assert.ok(sockets[0].sent.some((m) => m.method === 'Page.captureScreenshot'));
+  client.close();
+});
+
+test('captureScreenshot forwards format, quality, and clip options', async () => {
+  const { client, sockets } = harness();
+  await client.attach();
+  sockets[0].responder = (msg) => {
+    if (msg.method === 'Page.enable') return { result: {} };
+    if (msg.method === 'Page.captureScreenshot') {
+      assert.equal(msg.params.format, 'jpeg');
+      assert.equal(msg.params.quality, 80);
+      assert.deepEqual(msg.params.clip, { x: 10, y: 20, width: 200, height: 150, scale: 1 });
+      return { result: { data: 'BASE64JPEGDATA' } };
+    }
+    return null;
+  };
+  const result = await client.captureScreenshot({
+    format: 'jpeg',
+    quality: 80,
+    clip: { x: 10, y: 20, width: 200, height: 150, scale: 1 }
+  });
+  assert.deepEqual(result, { data: 'BASE64JPEGDATA', format: 'jpeg' });
+  client.close();
+});
+
+test('captureScreenshot defensively ignores Page.enable failure', async () => {
+  const { client, sockets } = harness();
+  await client.attach();
+  sockets[0].responder = (msg) => {
+    if (msg.method === 'Page.enable') return { error: { code: -32000, message: 'Page already enabled' } };
+    if (msg.method === 'Page.captureScreenshot') return { result: { data: 'BASE64FALLBACK' } };
+    return null;
+  };
+  const result = await client.captureScreenshot();
+  assert.deepEqual(result, { data: 'BASE64FALLBACK', format: 'png' });
+  client.close();
+});
+
+test('captureScreenshot propagates Page.captureScreenshot error', async () => {
+  const { client, sockets } = harness();
+  await client.attach();
+  sockets[0].responder = (msg) => {
+    if (msg.method === 'Page.enable') return { result: {} };
+    if (msg.method === 'Page.captureScreenshot') return { error: { code: -32000, message: 'Unable to capture screenshot' } };
+    return null;
+  };
+  await assert.rejects(client.captureScreenshot(), /Unable to capture screenshot/);
+  client.close();
+});
+

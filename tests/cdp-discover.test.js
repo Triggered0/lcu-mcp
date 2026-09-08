@@ -10,6 +10,7 @@ import {
   clearPortCache,
   findPageTarget,
   findProcessCdpPort,
+  listTargets,
   penguHint,
   probeVersion,
   readPenguConfig,
@@ -70,6 +71,50 @@ test('findPageTarget selects the page target and redacts it', async () => {
   } finally {
     server.close();
   }
+});
+
+test('listTargets returns all targets with redacted URLs', async () => {
+  const server = await stubCdp({
+    '/json/list': [
+      { id: 'OTHER', type: 'other', title: 'devtools', url: `https://riot:${PASSWORD}@127.0.0.1:29669/devtools.html` },
+      PAGE_TARGET
+    ]
+  });
+  try {
+    const targets = await listTargets(server.port);
+    assert.equal(targets.length, 2);
+    assert.equal(targets[0].id, 'OTHER');
+    assert.ok(!targets[0].url.includes(PASSWORD));
+    assert.equal(targets[1].id, 'ABC123');
+    assert.ok(!targets[1].url.includes(PASSWORD));
+  } finally {
+    server.close();
+  }
+});
+
+test('listTargets returns empty array when no targets exist', async () => {
+  const server = await stubCdp({
+    '/json/list': []
+  });
+  try {
+    const targets = await listTargets(server.port);
+    assert.deepEqual(targets, []);
+  } finally {
+    server.close();
+  }
+});
+
+test('listTargets throws CdpUnavailableError on closed port', async () => {
+  const server = await stubCdp({});
+  const port = server.port;
+  server.close();
+  await new Promise((r) => setTimeout(r, 20));
+
+  await assert.rejects(listTargets(port), (err) => {
+    assert.ok(err instanceof CdpUnavailableError);
+    assert.match(err.message, /Pengu Loader not active or RemoteDebuggingPort unset/);
+    return true;
+  });
 });
 
 test('a closed port yields the Pengu hint, not ECONNREFUSED', async () => {

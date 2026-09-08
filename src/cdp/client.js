@@ -195,6 +195,19 @@ export class CdpClient {
     return value;
   }
 
+  async captureScreenshot({ format = 'png', quality, clip } = {}) {
+    try {
+      await this.send('Page.enable');
+    } catch {
+      // Defensively ignore if already enabled or not supported in this context
+    }
+    const params = { format };
+    if (quality !== undefined) params.quality = quality;
+    if (clip !== undefined) params.clip = clip;
+    const result = await this.send('Page.captureScreenshot', params);
+    return { data: result.data, format };
+  }
+
   statusSnapshot() {
     return {
       attached: this.#socket !== null,

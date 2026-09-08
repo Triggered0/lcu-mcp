@@ -123,19 +123,25 @@ export async function probeVersion(port) {
   }
 }
 
-export async function findPageTarget(port) {
+export async function listTargets(port) {
   let targets;
   try {
     targets = await getJson(port, '/json/list');
   } catch (err) {
     throw new CdpUnavailableError(port, err.cause?.code ?? err.message);
   }
-  const page = Array.isArray(targets) ? targets.find((t) => t.type === 'page') : null;
+  if (!Array.isArray(targets)) return [];
+  return targets.map(redactTarget);
+}
+
+export async function findPageTarget(port) {
+  const targets = await listTargets(port);
+  const page = targets.find((t) => t.type === 'page');
   if (!page) {
     throw new Error(
       `CDP on port ${port} is reachable but exposes no "page" target. ` +
         'The client UX may still be starting; retry once it is visible.'
     );
   }
-  return redactTarget(page);
+  return page;
 }
