@@ -34,6 +34,9 @@ test('the server registers exactly the tools wired so far', async () => {
   const { client } = await connect(fakeContext());
   const names = (await client.listTools()).tools.map((t) => t.name).sort();
   assert.deepEqual(names, [
+    'lol_cdp_console_start',
+    'lol_cdp_console_stop',
+    'lol_cdp_console_tail',
     'lol_dom_query',
     'lol_endpoints',
     'lol_eval',

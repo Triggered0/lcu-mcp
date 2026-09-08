@@ -7,12 +7,14 @@ import { RingBuffer } from './lcu/buffer.js';
 import { LcuEventTap } from './lcu/events.js';
 import { CdpClient } from './cdp/client.js';
 import { WampRecorder } from './lcu/recorder.js';
+import { ConsoleTailer } from './cdp/console.js';
 import { registerStatusTool } from './tools/status.js';
 import { registerPassthroughTools } from './tools/passthrough.js';
 import { registerEndpointsTool } from './tools/endpoints.js';
 import { registerEventTools } from './tools/events.js';
 import { registerDomTools } from './tools/dom.js';
 import { registerRecorderTools } from './tools/recorder.js';
+import { registerConsoleTools } from './tools/console.js';
 
 export function buildContext({ env = process.env } = {}) {
   const config = loadConfig({ env });
@@ -21,6 +23,14 @@ export function buildContext({ env = process.env } = {}) {
   const tap = new LcuEventTap({ client: lcu, buffer });
   const cdp = new CdpClient({ port: config.cdpPort });
   const recorder = new WampRecorder({ client: lcu, config });
+  // Its own CDP socket: the tailer's re-attach supervisor must not be able to
+  // destabilise the shared client that lol_eval and lol_dom_query use.
+  const consoleCdp = new CdpClient({ port: config.cdpPort });
+  const consoleTailer = new ConsoleTailer({
+    cdp: consoleCdp,
+    config,
+    secrets: () => (lcu.currentPassword() ? [lcu.currentPassword()] : [])
+  });
   return {
     config,
     lcu,
@@ -28,6 +38,7 @@ export function buildContext({ env = process.env } = {}) {
     tap,
     cdp,
     recorder,
+    consoleTailer,
     // The live password, for guard() to strip out of error text. No tool returns it.
     secrets: () => (lcu.currentPassword() ? [lcu.currentPassword()] : [])
   };
@@ -41,6 +52,7 @@ export function createServer(ctx) {
   registerEventTools(server, ctx);
   registerDomTools(server, ctx);
   registerRecorderTools(server, ctx);
+  registerConsoleTools(server, ctx);
   return server;
 }
 
