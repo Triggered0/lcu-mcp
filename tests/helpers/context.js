@@ -11,10 +11,15 @@ export function fakeContext(overrides = {}) {
       get: async () => ({ status: 200, body: 'None' })
     },
     cdp: {
+      port: 8888,
       statusSnapshot: () => ({ attached: false, port: 8888, targetId: null, targetTitle: null, lastError: null }),
       evaluate: async () => ({ value: null, exceptionDetails: null }),
-      domQuery: async () => null
+      domQuery: async () => null,
+      getPort: async () => 8888,
+      close: () => {}
     },
+    discoverPage: async () => ({ id: 'P1', title: 'League of Legends' }),
+    resolvePort: async () => ({ port: 8888, source: 'fake' }),
     tap: {
       statusSnapshot: () => ({ running: false, connected: false, filters: [], attempts: 0, buffered: buffer.length, lastError: null }),
       start: async () => {},

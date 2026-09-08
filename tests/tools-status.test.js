@@ -2,9 +2,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import { createServer } from '../src/index.js';
+import { createServer, buildContext } from '../src/index.js';
 import { fail, guard, ok } from '../src/tools/result.js';
 import { fakeContext } from './helpers/context.js';
+import { clearPortCache } from '../src/cdp/discover.js';
 
 async function connect(ctx) {
   const server = createServer(ctx);
@@ -45,6 +46,7 @@ test('the server registers exactly the tools wired so far', async () => {
     'lol_events_stop',
     'lol_get',
     'lol_request',
+    'lol_restart_ux',
     'lol_status',
     'lol_wamp_record_dump',
     'lol_wamp_record_start',
@@ -59,6 +61,7 @@ test('lol_status reports both subsystems and the config', async () => {
   const status = JSON.parse(result.content[0].text);
   assert.equal(status.lcu.port, 29669);
   assert.equal(status.cdp.attached, false);
+  assert.equal(status.cdp.port, 8888);
   assert.equal(status.events.running, false);
   assert.equal(status.config.allowEval, true);
   assert.equal(status.config.cdpPort, 8888);
@@ -71,3 +74,24 @@ test('lol_status never leaks the password', async () => {
   assert.ok(!JSON.stringify(result).includes('S3cr3t-Pa55'));
   await client.close();
 });
+
+test('the server can invoke lol_restart_ux with fakeContext', async () => {
+  const { client } = await connect(fakeContext());
+  const result = await client.callTool({ name: 'lol_restart_ux', arguments: { waitForReady: false } });
+  const data = JSON.parse(result.content[0].text);
+  assert.equal(data.restarted, true);
+  await client.close();
+});
+
+test('buildContext wires dynamic portResolver to cdp and consoleCdp', async () => {
+  clearPortCache();
+  const ctx = buildContext({
+    env: {
+      LCU_CDP_PORT: '9876',
+      LCU_MCP_CONFIG: 'does-not-exist-for-test.json'
+    }
+  });
+  assert.equal(await ctx.cdp.getPort(), 9876);
+  assert.equal(ctx.cdp.port, 9876);
+});
+

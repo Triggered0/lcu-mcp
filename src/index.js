@@ -16,20 +16,26 @@ import { registerEventTools } from './tools/events.js';
 import { registerDomTools } from './tools/dom.js';
 import { registerRecorderTools } from './tools/recorder.js';
 import { registerConsoleTools } from './tools/console.js';
+import { registerUxTools } from './tools/ux.js';
+import { resolveCdpPort } from './cdp/discover.js';
 
 export function buildContext({ env = process.env } = {}) {
   const config = loadConfig({ env });
+  const portResolver = async ({ forceRefresh = false } = {}) => {
+    const resolved = await resolveCdpPort({ config, env, forceRefresh });
+    return resolved.port;
+  };
   const lcu = new LcuClient({});
   const buffer = new RingBuffer(config.eventBufferSize);
   const tap = new LcuEventTap({ client: lcu, buffer });
-  const cdp = new CdpClient({ port: config.cdpPort });
+  const cdp = new CdpClient({ portResolver });
   const recorder = new WampRecorder({ client: lcu, config });
   if (config.wampRecordFile) {
     recorder.attachSink(new NdjsonSink({ path: config.wampRecordFile }));
   }
   // Its own CDP socket: the tailer's re-attach supervisor must not be able to
   // destabilise the shared client that lol_eval and lol_dom_query use.
-  const consoleCdp = new CdpClient({ port: config.cdpPort });
+  const consoleCdp = new CdpClient({ portResolver });
   const consoleTailer = new ConsoleTailer({
     cdp: consoleCdp,
     config,
@@ -57,6 +63,7 @@ export function createServer(ctx) {
   registerDomTools(server, ctx);
   registerRecorderTools(server, ctx);
   registerConsoleTools(server, ctx);
+  registerUxTools(server, ctx);
   return server;
 }
 
