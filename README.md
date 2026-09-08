@@ -91,12 +91,25 @@ claude mcp add lcu --scope user -- node C:\path\to\lcu-mcp\src\index.js
 | `lol_events_stop()` | Close the tap |
 | `lol_dom_query(selector, all?, props?)` | Query the client DOM |
 | `lol_eval(expression, awaitPromise?)` | Evaluate JavaScript in the page |
+| `lol_wamp_record_start(uris?, restart?)` | Record LCU WAMP traffic on an independent socket |
+| `lol_wamp_record_dump(uri?, since?, until?, kinds?, limit?, cursor?)` | Dump the recorded timeline and per-URI stats |
+| `lol_wamp_record_stop()` | Close the recorder socket |
+| `lol_cdp_console_start()` | Begin buffering client console output |
+| `lol_cdp_console_tail(since?, until?, cursor?, limit?, level?, targetId?, text?)` | Read buffered console entries |
+| `lol_cdp_console_stop()` | Stop and discard the console buffer |
 
 **`lol_status` first.** When anything else fails it tells you which half is down — a closed client looks nothing like a missing Pengu install.
 
 **Events are polled.** `lol_events_poll` returns a `cursor`; pass it back as `since` next time. A non-zero `dropped` means the ring buffer wrapped and that many events were lost after your cursor. Entries with `truncated: true` had their `data` clipped at 4 KB — re-fetch the full body with `lol_get` on the entry's `uri`.
 
 **The client only emits when state changes.** Sitting idle on the home screen it can stay silent indefinitely; navigating the UI or entering a lobby produces bursts. An empty poll usually means nothing happened, not that the tap is broken — check `running` and `lol_status` to tell the two apart.
+
+**Diagnosing a missing event.** `lol_wamp_record_*` runs on its own WAMP socket
+outside the client renderer, so it proves what the LCU actually emitted and
+when. Read it together with `lol_cdp_console_tail` and a `lol_eval` probe to
+separate three cases: the LCU never emitted, it emitted but the page never
+received, or the page received and mishandled. Start both recorders *before*
+the thing you want to observe — they only hold what arrived after they started.
 
 **Filters are URI prefixes applied at ingest.** The unfiltered firehose fills the buffer quickly, so pass something like `["/lol-champ-select/", "/lol-gameflow/"]` unless you genuinely want everything.
 
@@ -122,6 +135,12 @@ claude mcp add lcu --scope user -- node C:\path\to\lcu-mcp\src\index.js
 | `cdpPort` | `8888` | Pengu Loader's remote debugging port |
 | `eventBufferSize` | `1000` | Ring buffer capacity; oldest entries are evicted first |
 | `writeAllowlist` | `[]` | Which mutating requests `lol_request` may send |
+| `wampRecordBufferSize` | `20000` | Recorder timeline entry count |
+| `wampRecordMaxBytes` | `67108864` | Recorder byte budget; evicts on whichever fills first |
+| `wampRecordPayloadCap` | `512` | Per-payload truncation for the recorder |
+| `wampRecordFullPayloadUris` | `["/lol-gameflow/v1/gameflow-phase"]` | URI prefixes exempt from the payload cap |
+| `wampRecordFile` | `null` | Optional NDJSON path the timeline is appended to |
+| `cdpConsoleBufferSize` | `5000` | Console tailer entry count |
 
 Allowlist matching rules:
 

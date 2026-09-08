@@ -187,6 +187,11 @@ Calling `lol_events_start` while the tap is already running replaces the active
 filters and keeps the existing buffer contents; it is not an error. Filters
 therefore apply only to events arriving after the call.
 
+The event tap above is a live watch. For forensic work there is a second,
+independent recorder on its own WAMP socket — see
+`docs/superpowers/specs/2026-09-07-lcu-forensics-design.md`. It is deliberately
+separate: the recorder's only value is that nothing else can perturb it.
+
 ## Configuration
 
 `config/allowlist.json`, path overridable by the `LCU_MCP_CONFIG` environment
