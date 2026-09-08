@@ -1,13 +1,13 @@
 import { WebSocket } from 'ws';
+import { backoffDelay } from '../backoff.js';
 import { decodeFrame, matchesFilters, truncateData } from './ingest.js';
 import { redactSecrets } from '../redact.js';
 
 export const RECONNECT_URI = '/__lcu_mcp__/reconnected';
 const SUBSCRIBE_FRAME = JSON.stringify([5, 'OnJsonApiEvent']);
 
-export function backoffDelay(attempt) {
-  return Math.min(30000, 1000 * 2 ** attempt);
-}
+// Re-exported so existing consumers keep importing it from here.
+export { backoffDelay };
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 

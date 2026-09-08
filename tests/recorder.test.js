@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
-import { WampRecorder } from '../src/lcu/recorder.js';
+import { backoffDelay, WampRecorder } from '../src/lcu/recorder.js';
 
 class FakeSocket extends EventEmitter {
   sent = [];
@@ -210,4 +210,98 @@ test('a frame arriving on a superseded socket is ignored', async () => {
   socket.emit('message', frame('/a'));
   const events = h.recorder.dump({ kinds: ['event'], limit: 100 }).entries;
   assert.equal(events.length, 0);
+});
+
+test('backoff grows and is capped', () => {
+  assert.equal(backoffDelay(0), 1000);
+  assert.equal(backoffDelay(1), 2000);
+  assert.equal(backoffDelay(10), 30000);
+});
+
+test('a close records its code next to the last event that got through', async () => {
+  const h = harness({ delay: async () => {} });
+  const socket = await started(h);
+  socket.emit('message', frame('/lol-gameflow/v1/gameflow-phase'));
+  socket.emit('close', 1006, Buffer.from('abnormal'));
+  await new Promise((r) => setImmediate(r));
+
+  const { entries } = h.recorder.dump({ limit: 100 });
+  const closeAt = entries.findIndex((e) => e.kind === 'close');
+  const lastEventAt = entries.map((e) => e.kind).lastIndexOf('event');
+  assert.ok(closeAt > lastEventAt, 'the close must follow the last delivered event');
+  assert.equal(entries[closeAt].code, 1006);
+  assert.equal(entries[closeAt].reason, 'abnormal');
+  assert.equal(entries[closeAt].wasClean, false);
+  h.recorder.stop();
+});
+
+test('a clean close is marked as such', async () => {
+  const h = harness({ delay: async () => {} });
+  const socket = await started(h);
+  socket.emit('close', 1000, Buffer.from(''));
+  await new Promise((r) => setImmediate(r));
+  const close = h.recorder.dump({ kinds: ['close'], limit: 10 }).entries[0];
+  assert.equal(close.wasClean, true);
+  h.recorder.stop();
+});
+
+test('reconnect reopens, invalidates the cached port, and records the gap', async () => {
+  const h = harness({ delay: async () => {} });
+  const first = await started(h);
+
+  first.emit('close', 1006, Buffer.from('dead'));
+  // Let the reconnect loop run: delay resolves immediately, then the new
+  // socket needs its open event.
+  await new Promise((r) => setImmediate(r));
+  h.sockets[1]?.emit('open');
+  await new Promise((r) => setImmediate(r));
+
+  assert.equal(h.sockets.length, 2, 'a new socket was opened');
+  assert.equal(h.calls.invalidate, 1, 'the cached LCU port was invalidated for the restart case');
+
+  const kinds = h.recorder.dump({ limit: 100 }).entries.map((e) => e.kind);
+  assert.deepEqual(kinds, ['start', 'open', 'close', 'open', 'gap']);
+
+  const gap = h.recorder.dump({ kinds: ['gap'], limit: 10 }).entries[0];
+  assert.ok(gap.durationMs >= 0);
+  assert.ok(gap.sinceTs > 0);
+  h.recorder.stop();
+});
+
+test('the recorder resubscribes after a reconnect', async () => {
+  const h = harness({ delay: async () => {} });
+  const first = await started(h, { uris: ['/lol-gameflow/v1/gameflow-phase'] });
+  first.emit('close', 1006, Buffer.from(''));
+  await new Promise((r) => setImmediate(r));
+  h.sockets[1]?.emit('open');
+  await new Promise((r) => setImmediate(r));
+
+  assert.deepEqual(JSON.parse(h.sockets[1].sent[0]), [5, 'OnJsonApiEvent_lol-gameflow_v1_gameflow-phase']);
+  h.recorder.stop();
+});
+
+test('stop orphans an in-flight reconnect loop', async () => {
+  let release;
+  const h = harness({ delay: () => new Promise((r) => { release = r; }) });
+  const first = await started(h);
+  first.emit('close', 1006, Buffer.from(''));
+  await new Promise((r) => setImmediate(r));
+
+  h.recorder.stop();
+  release();
+  await new Promise((r) => setImmediate(r));
+
+  assert.equal(h.sockets.length, 1, 'no socket was opened after stop');
+});
+
+test('a password never reaches the timeline through an error entry', async () => {
+  const h = harness({ delay: async () => {} });
+  const socket = await started(h);
+  socket.emit('error', new Error('connect failed for wss://riot:super-secret-pw@127.0.0.1:29669/'));
+  await new Promise((r) => setImmediate(r));
+
+  const text = JSON.stringify(h.recorder.dump({ limit: 100 }));
+  assert.ok(!text.includes('super-secret-pw'), 'the password must never be stored');
+  assert.ok(text.includes('***'));
+  h.recorder.stop();
 });

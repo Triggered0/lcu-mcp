@@ -1,8 +1,11 @@
 import { WebSocket } from 'ws';
+import { backoffDelay } from '../backoff.js';
 import { createClock } from '../clock.js';
 import { redactSecrets } from '../redact.js';
 import { decodeEventFrame, subscribeEndpoint, truncateData } from './ingest.js';
 import { TimelineBuffer } from './timeline.js';
+
+export { backoffDelay };
 
 export const LIFECYCLE_KINDS = ['start', 'stop', 'restart', 'open', 'close', 'error', 'gap'];
 
@@ -22,6 +25,12 @@ export class WampRecorder {
   #uris = [];
   #lastError = null;
   #knownPasswords = new Set();
+  // Identity token for the one reconnect loop allowed to run. `null` means no
+  // loop owns the recorder. A token rather than a boolean so stop() can orphan
+  // an in-flight loop by clearing the field, without a later start() being
+  // locked out and without the orphan clearing a flag its successor holds.
+  #reconnectOwner = null;
+  #lastCloseTs = null;
 
   constructor({ client, config, wsFactory, delay = sleep, clock = createClock() }) {
     this.client = client;
@@ -126,14 +135,49 @@ export class WampRecorder {
     return this.#mode === 'firehose' ? ['OnJsonApiEvent'] : this.#uris.map(subscribeEndpoint);
   }
 
-  // Placeholder until Task 6 installs the reconnect loop.
   #onClose(socket, code, reason) {
-    this.#record(socket, {
+    if (!this.#running || socket !== this.#socket) return;
+    const stored = this.#buffer.push({
       kind: 'close',
       code: code ?? null,
       reason: reason ? String(reason) : '',
       wasClean: code === 1000
     });
+    this.#lastCloseTs = stored.ts;
+    this.#socket = null;
+    // Fire and forget: no MCP call is waiting on this.
+    this.#reconnect();
+  }
+
+  async #reconnect() {
+    if (this.#reconnectOwner !== null) return;
+    const owner = Symbol('reconnect');
+    this.#reconnectOwner = owner;
+    const sinceTs = this.#lastCloseTs;
+    try {
+      for (let attempt = 0; this.#running && this.#reconnectOwner === owner; attempt += 1) {
+        await this.delay(backoffDelay(attempt));
+        if (!this.#running || this.#reconnectOwner !== owner) return;
+        try {
+          // The port changes when the client restarts, so the cached
+          // credentials must not be trusted across a reconnect.
+          this.client.invalidate?.();
+          await this.#connect(attempt + 1);
+        } catch (err) {
+          this.#lastError = this.#redact(`reconnect failed: ${errorMessage(err)}`);
+          this.#buffer.push({ kind: 'error', message: this.#lastError });
+          continue;
+        }
+        this.#buffer.push({
+          kind: 'gap',
+          durationMs: sinceTs === null ? null : this.clock.now() - sinceTs,
+          sinceTs
+        });
+        return;
+      }
+    } finally {
+      if (this.#reconnectOwner === owner) this.#reconnectOwner = null;
+    }
   }
 
   #record(socket, entry) {
@@ -199,6 +243,7 @@ export class WampRecorder {
 
   #teardown() {
     this.#running = false;
+    this.#reconnectOwner = null;
     const socket = this.#socket;
     this.#socket = null;
     this.#closeQuietly(socket);
@@ -224,6 +269,7 @@ export class WampRecorder {
     if (!this.#running) return { stopped: false, entries: this.#buffer?.length ?? 0 };
     const socket = this.#socket;
     this.#running = false;
+    this.#reconnectOwner = null;
     this.#socket = null;
     this.#closeQuietly(socket);
     // Pushed after #running is false so the identity-checked #record path
