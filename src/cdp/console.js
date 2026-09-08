@@ -124,9 +124,9 @@ export class ConsoleTailer {
     this.#reattach();
   }
 
-  // The renderer reloading changes the target id, which is exactly when the
-  // interesting thing happens. Without this the tailer goes deaf at the worst
-  // possible moment, and the empty buffer reads as "the page logged nothing".
+  // When the client UI restarts or the target is destroyed, without this
+  // the tailer goes deaf at the worst possible moment, and the empty buffer
+  // reads as "the page logged nothing".
   async #reattach() {
     if (this.#reconnectOwner !== null) return;
     const owner = Symbol('reattach');

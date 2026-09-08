@@ -8,9 +8,11 @@ export function registerConsoleTools(server, ctx) {
       title: 'Start tailing the client console',
       description:
         'Attach to the client renderer and begin buffering console output and uncaught ' +
-        'exceptions in the background, re-attaching automatically when the renderer reloads and ' +
-        'the target id changes. Call this BEFORE the thing you want to capture: the buffer only ' +
-        'holds what arrived after it started.',
+        'exceptions in the background. A page reload does not interrupt this: the debug target ' +
+        'survives it, so logging continues with no gap and no reattach entry. Only when the ' +
+        'target itself is destroyed and recreated — the client UI restarting — does the tailer ' +
+        're-attach, and it records a "reattach" entry for that. Call this BEFORE the thing you ' +
+        'want to capture: the buffer only holds what arrived after it started.',
       inputSchema: {}
     },
     guard(async () => ok(await ctx.consoleTailer.start()), ctx)
