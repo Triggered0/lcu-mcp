@@ -11,10 +11,21 @@ export class CdpClient {
   #listeners = new Map();
   #closeListeners = new Set();
 
-  constructor({ port, wsFactory = (url) => new WebSocket(url), discover = findPageTarget } = {}) {
+  constructor({ port, portResolver, wsFactory = (url) => new WebSocket(url), discover = findPageTarget } = {}) {
     this.port = port;
+    this.portResolver = portResolver;
     this.wsFactory = wsFactory;
     this.discover = discover;
+  }
+
+  async getPort() {
+    if (this.port) return this.port;
+    if (this.portResolver) {
+      const resolved = await this.portResolver();
+      this.port = typeof resolved === 'object' && resolved !== null ? resolved.port : resolved;
+      return this.port;
+    }
+    return this.port;
   }
 
   async attach() {
@@ -42,6 +53,10 @@ export class CdpClient {
   }
 
   async #connect() {
+    if (this.portResolver) {
+      const resolved = await this.portResolver();
+      this.port = typeof resolved === 'object' && resolved !== null ? resolved.port : resolved;
+    }
     const target = await this.discover(this.port);
     const socket = this.wsFactory(target.webSocketDebuggerUrl);
 

@@ -53,7 +53,7 @@ export async function resolveCdpPort({
     return cachedPortResolution;
   }
 
-  if (Number.isInteger(config?.cdpPort)) {
+  if (Number.isInteger(config?.cdpPort) && config.cdpPort >= 1 && config.cdpPort <= 65535) {
     cachedPortResolution = { port: config.cdpPort, source: 'explicit' };
     return cachedPortResolution;
   }

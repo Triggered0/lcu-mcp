@@ -183,6 +183,29 @@ test('resolveCdpPort adheres to priority order', async () => {
   assert.deepEqual(res, { port: 7777, source: 'explicit' });
 
   clearPortCache();
+  // 'auto' or null in config falls through to env
+  res = await resolveCdpPort({
+    config: { cdpPort: 'auto' },
+    env: { LCU_CDP_PORT: '7788' }
+  });
+  assert.deepEqual(res, { port: 7788, source: 'env' });
+
+  clearPortCache();
+  res = await resolveCdpPort({
+    config: { cdpPort: null },
+    env: { LCU_CDP_PORT: '7788' }
+  });
+  assert.deepEqual(res, { port: 7788, source: 'env' });
+
+  clearPortCache();
+  // Out of range port in config falls through
+  res = await resolveCdpPort({
+    config: { cdpPort: 70000 },
+    env: { LCU_CDP_PORT: '7788' }
+  });
+  assert.deepEqual(res, { port: 7788, source: 'env' });
+
+  clearPortCache();
   // 2. Env var wins over file
   res = await resolveCdpPort({
     config: {},

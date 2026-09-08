@@ -188,3 +188,90 @@ test('onClose fires when the live socket closes', async () => {
   sockets[0].close();
   assert.equal(closed, 1);
 });
+
+test('CdpClient calls portResolver if provided and updates port and statusSnapshot', async () => {
+  let resolved = false;
+  const client = new CdpClient({
+    portResolver: async () => {
+      resolved = true;
+      return 9999;
+    },
+    discover: async (port) => {
+      assert.equal(port, 9999);
+      return { id: 'T1', webSocketDebuggerUrl: 'ws://127.0.0.1:9999/t1' };
+    },
+    wsFactory: () => {
+      const emitter = new EventEmitter();
+      emitter.send = () => {};
+      emitter.close = () => {};
+      process.nextTick(() => emitter.emit('open'));
+      return emitter;
+    }
+  });
+  assert.equal(client.statusSnapshot().port, undefined);
+  await client.attach();
+  assert.equal(resolved, true);
+  assert.equal(client.port, 9999);
+  assert.equal(client.statusSnapshot().port, 9999);
+  client.close();
+});
+
+test('CdpClient accepts portResolver returning an object with port property', async () => {
+  const client = new CdpClient({
+    portResolver: async () => ({ port: 7777, source: 'pengu-config' }),
+    discover: async (port) => {
+      assert.equal(port, 7777);
+      return { id: 'T2', webSocketDebuggerUrl: 'ws://127.0.0.1:7777/t2' };
+    },
+    wsFactory: () => {
+      const emitter = new EventEmitter();
+      emitter.send = () => {};
+      emitter.close = () => {};
+      process.nextTick(() => emitter.emit('open'));
+      return emitter;
+    }
+  });
+  await client.attach();
+  assert.equal(client.port, 7777);
+  assert.equal(client.statusSnapshot().port, 7777);
+  client.close();
+});
+
+test('CdpClient.getPort resolves port when portResolver is present or returns static port', async () => {
+  const staticClient = new CdpClient({ port: 8888 });
+  assert.equal(await staticClient.getPort(), 8888);
+
+  const dynamicClient = new CdpClient({
+    portResolver: async () => 9222
+  });
+  assert.equal(await dynamicClient.getPort(), 9222);
+  assert.equal(dynamicClient.port, 9222);
+});
+
+test('CdpClient re-resolves port on reconnect retry if initial connect fails', async () => {
+  let callCount = 0;
+  const portsUsed = [];
+  const client = new CdpClient({
+    portResolver: async () => {
+      callCount += 1;
+      return callCount === 1 ? 1111 : 2222;
+    },
+    discover: async (port) => {
+      portsUsed.push(port);
+      if (port === 1111) throw new Error('stale port');
+      return { id: 'T3', webSocketDebuggerUrl: 'ws://127.0.0.1:2222/t3' };
+    },
+    wsFactory: () => {
+      const emitter = new EventEmitter();
+      emitter.send = () => {};
+      emitter.close = () => {};
+      process.nextTick(() => emitter.emit('open'));
+      return emitter;
+    }
+  });
+  await client.attach();
+  assert.deepEqual(portsUsed, [1111, 2222]);
+  assert.equal(client.port, 2222);
+  assert.equal(client.statusSnapshot().port, 2222);
+  client.close();
+});

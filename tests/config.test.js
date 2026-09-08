@@ -15,7 +15,7 @@ function tmpConfig(contents) {
 test('missing config file falls back to defaults', () => {
   const config = loadConfig({ env: { LCU_MCP_CONFIG: join(tmpdir(), 'does-not-exist.json') } });
   assert.equal(config.allowEval, DEFAULTS.allowEval);
-  assert.equal(config.cdpPort, 8888);
+  assert.equal(config.cdpPort, 'auto');
   assert.equal(config.eventBufferSize, 1000);
   assert.deepEqual(config.writeAllowlist, []);
   assert.match(config.configPath, /does-not-exist\.json$/);
@@ -40,6 +40,31 @@ test('validateConfig rejects wrong types', () => {
   assert.throws(() => validateConfig({ writeAllowlist: 'POST /a' }), /writeAllowlist/);
   assert.throws(() => validateConfig({ allowEval: 'yes' }), /allowEval/);
   assert.throws(() => validateConfig({ eventBufferSize: 0 }), /eventBufferSize/);
+});
+
+test('validateConfig accepts "auto" and null for cdpPort', () => {
+  const autoCfg = validateConfig({ cdpPort: 'auto' });
+  assert.equal(autoCfg.cdpPort, 'auto');
+  const nullCfg = validateConfig({ cdpPort: null });
+  assert.equal(nullCfg.cdpPort, 'auto');
+});
+
+test('validateConfig accepts valid integer port for cdpPort', () => {
+  const cfg = validateConfig({ cdpPort: 8888 });
+  assert.equal(cfg.cdpPort, 8888);
+  const minCfg = validateConfig({ cdpPort: 1 });
+  assert.equal(minCfg.cdpPort, 1);
+  const maxCfg = validateConfig({ cdpPort: 65535 });
+  assert.equal(maxCfg.cdpPort, 65535);
+});
+
+test('validateConfig rejects invalid cdpPort values', () => {
+  assert.throws(() => validateConfig({ cdpPort: 'eight' }), /cdpPort/);
+  assert.throws(() => validateConfig({ cdpPort: 0 }), /cdpPort/);
+  assert.throws(() => validateConfig({ cdpPort: -1 }), /cdpPort/);
+  assert.throws(() => validateConfig({ cdpPort: 65536 }), /cdpPort/);
+  assert.throws(() => validateConfig({ cdpPort: 8888.5 }), /cdpPort/);
+  assert.throws(() => validateConfig({ cdpPort: false }), /cdpPort/);
 });
 
 test('the recorder and console defaults are applied', () => {

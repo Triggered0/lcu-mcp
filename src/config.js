@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 
 export const DEFAULTS = {
   allowEval: true,
-  cdpPort: 8888,
+  cdpPort: 'auto',
   eventBufferSize: 1000,
   writeAllowlist: [],
   wampRecordBufferSize: 20000,
@@ -22,8 +22,10 @@ export function validateConfig(raw) {
   if (typeof config.allowEval !== 'boolean') {
     throw new Error(`Config "allowEval" must be a boolean, got ${typeof config.allowEval}`);
   }
-  if (!Number.isInteger(config.cdpPort) || config.cdpPort < 1 || config.cdpPort > 65535) {
-    throw new Error(`Config "cdpPort" must be an integer port, got ${JSON.stringify(config.cdpPort)}`);
+  if (config.cdpPort === null || config.cdpPort === 'auto') {
+    config.cdpPort = 'auto';
+  } else if (!Number.isInteger(config.cdpPort) || config.cdpPort < 1 || config.cdpPort > 65535) {
+    throw new Error(`Config "cdpPort" must be "auto" or an integer port, got ${JSON.stringify(config.cdpPort)}`);
   }
   if (!Number.isInteger(config.eventBufferSize) || config.eventBufferSize < 1) {
     throw new Error(`Config "eventBufferSize" must be a positive integer, got ${JSON.stringify(config.eventBufferSize)}`);
