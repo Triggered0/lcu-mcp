@@ -42,7 +42,10 @@ test('the server registers exactly the tools wired so far', async () => {
     'lol_events_stop',
     'lol_get',
     'lol_request',
-    'lol_status'
+    'lol_status',
+    'lol_wamp_record_dump',
+    'lol_wamp_record_start',
+    'lol_wamp_record_stop'
   ]);
   await client.close();
 });

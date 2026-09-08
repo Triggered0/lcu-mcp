@@ -20,6 +20,12 @@ export function fakeContext(overrides = {}) {
       start: async () => {},
       stop: () => {}
     },
+    recorder: {
+      statusSnapshot: () => ({ running: false, startedAt: null, mode: 'firehose', uris: [], entries: 0, bytes: 0, droppedTotal: 0, lastError: null }),
+      start: async () => ({ startedAt: 1, mode: 'firehose', uris: [] }),
+      dump: () => ({ entries: [], stats: {}, dropped: 0, cursor: 0, remaining: 0, running: false, startedAt: null }),
+      stop: () => ({ stopped: false, entries: 0 })
+    },
     secrets: () => ['S3cr3t-Pa55'],
     ...overrides
   };

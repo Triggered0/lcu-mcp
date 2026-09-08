@@ -17,6 +17,7 @@ export function registerStatusTool(server, ctx) {
           lcu: ctx.lcu.statusSnapshot(),
           cdp: ctx.cdp.statusSnapshot(),
           events: ctx.tap.statusSnapshot(),
+          recorder: ctx.recorder.statusSnapshot(),
           config: {
             configPath: ctx.config.configPath,
             cdpPort: ctx.config.cdpPort,
