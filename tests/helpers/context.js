@@ -47,6 +47,11 @@ export function fakeContext(overrides = {}) {
       tail: () => ({ entries: [], cursor: 0, dropped: 0, remaining: 0, running: false, attached: false, targetId: null, startedAt: null }),
       stop: () => ({ stopped: false, entries: 0 })
     },
+    schema: {
+      fetchSchema: async () => ({}),
+      query: async () => ({ pathsCount: 0, definitionsCount: 0, paths: [] }),
+      dereference: (node) => node
+    },
     secrets: () => ['S3cr3t-Pa55'],
     ...overrides
   };

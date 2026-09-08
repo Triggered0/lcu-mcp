@@ -49,6 +49,7 @@ test('the server registers exactly the tools wired so far', async () => {
     'lol_get',
     'lol_request',
     'lol_restart_ux',
+    'lol_schema',
     'lol_status',
     'lol_wamp_record_dump',
     'lol_wamp_record_start',
