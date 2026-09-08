@@ -67,7 +67,8 @@ await record(`CDP /json/version on ${config.cdpPort}`, async () => {
 });
 
 await record('CDP Runtime.evaluate', async () => {
-  const value = await cdp.evaluate('document.title');
+  const { value, exceptionDetails } = await cdp.evaluate('document.title');
+  if (exceptionDetails) throw new Error(exceptionDetails.description ?? exceptionDetails.text);
   return `document.title = ${JSON.stringify(value)}`;
 });
 
@@ -77,10 +78,11 @@ await record('CDP DOM query', async () => {
 });
 
 await record('CDP page-context LCU fetch', async () => {
-  const value = await cdp.evaluate(
+  const { value, exceptionDetails } = await cdp.evaluate(
     "fetch('/lol-summoner/v1/current-summoner').then(r => r.status)",
     { awaitPromise: true }
   );
+  if (exceptionDetails) throw new Error(exceptionDetails.description ?? exceptionDetails.text);
   return `status ${value}`;
 });
 
