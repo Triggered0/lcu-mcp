@@ -8,6 +8,8 @@ export class CdpClient {
   #nextId = 1;
   #lastError = null;
   #attaching = null;
+  #listeners = new Map();
+  #closeListeners = new Set();
 
   constructor({ port, wsFactory = (url) => new WebSocket(url), discover = findPageTarget } = {}) {
     this.port = port;
@@ -51,6 +53,7 @@ export class CdpClient {
       }
       for (const { reject } of this.#pending.values()) reject(new Error('CDP socket closed'));
       this.#pending.clear();
+      this.#emit(this.#closeListeners, undefined);
     });
     socket.on('error', (err) => {
       this.#lastError = `CDP socket error: ${err?.code ?? err?.message ?? 'unknown'}`;
@@ -72,7 +75,11 @@ export class CdpClient {
     } catch {
       return;
     }
-    if (message.id === undefined) return; // an unsolicited CDP event; nothing subscribes yet
+    if (message.id === undefined) {
+      const handlers = this.#listeners.get(message.method);
+      if (handlers) this.#emit(handlers, message.params ?? {});
+      return;
+    }
     const waiter = this.#pending.get(message.id);
     if (!waiter) return;
     this.#pending.delete(message.id);
@@ -93,6 +100,31 @@ export class CdpClient {
         reject(err);
       }
     });
+  }
+
+  // CDP events arrive unsolicited, with a `method` and no `id`. Without a
+  // dispatch they are dropped, which is why nothing could tail the console.
+  on(method, handler) {
+    const list = this.#listeners.get(method) ?? new Set();
+    list.add(handler);
+    this.#listeners.set(method, list);
+    return () => list.delete(handler);
+  }
+
+  onClose(handler) {
+    this.#closeListeners.add(handler);
+    return () => this.#closeListeners.delete(handler);
+  }
+
+  #emit(handlers, arg) {
+    for (const handler of handlers) {
+      try {
+        handler(arg);
+      } catch {
+        // A subscriber's failure must not stop the socket's message loop or
+        // rob every later subscriber of the event.
+      }
+    }
   }
 
   async evaluate(expression, { awaitPromise = false } = {}) {

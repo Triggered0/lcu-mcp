@@ -108,3 +108,59 @@ test('attach failure is reported as CDP unavailable', async () => {
   assert.equal(client.statusSnapshot().attached, false);
   assert.match(client.statusSnapshot().lastError, /Pengu Loader/);
 });
+
+test('on delivers CDP events to subscribers', async () => {
+  const { client, sockets } = harness();
+  await client.attach();
+  const seen = [];
+  client.on('Runtime.consoleAPICalled', (params) => seen.push(params));
+
+  sockets[0].emit('message', JSON.stringify({
+    method: 'Runtime.consoleAPICalled',
+    params: { type: 'log', args: [{ type: 'string', value: 'hi' }] }
+  }));
+
+  assert.equal(seen.length, 1);
+  assert.equal(seen[0].type, 'log');
+  client.close();
+});
+
+test('an event with no subscriber is ignored, not thrown', async () => {
+  const { client, sockets } = harness();
+  await client.attach();
+  sockets[0].emit('message', JSON.stringify({ method: 'Runtime.somethingElse', params: {} }));
+  assert.equal(client.statusSnapshot().attached, true);
+  client.close();
+});
+
+test('on returns an unsubscribe that stops delivery', async () => {
+  const { client, sockets } = harness();
+  await client.attach();
+  const seen = [];
+  const off = client.on('Runtime.exceptionThrown', (p) => seen.push(p));
+  sockets[0].emit('message', JSON.stringify({ method: 'Runtime.exceptionThrown', params: { a: 1 } }));
+  off();
+  sockets[0].emit('message', JSON.stringify({ method: 'Runtime.exceptionThrown', params: { a: 2 } }));
+  assert.equal(seen.length, 1);
+  client.close();
+});
+
+test('a throwing subscriber does not break the message loop', async () => {
+  const { client, sockets } = harness();
+  await client.attach();
+  const seen = [];
+  client.on('Runtime.consoleAPICalled', () => { throw new Error('subscriber blew up'); });
+  client.on('Runtime.consoleAPICalled', (p) => seen.push(p));
+  sockets[0].emit('message', JSON.stringify({ method: 'Runtime.consoleAPICalled', params: { type: 'log' } }));
+  assert.equal(seen.length, 1, 'a later subscriber still receives the event');
+  client.close();
+});
+
+test('onClose fires when the live socket closes', async () => {
+  const { client, sockets } = harness();
+  await client.attach();
+  let closed = 0;
+  client.onClose(() => { closed += 1; });
+  sockets[0].close();
+  assert.equal(closed, 1);
+});
