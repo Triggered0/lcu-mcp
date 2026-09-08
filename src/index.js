@@ -17,6 +17,7 @@ import { registerDomTools } from './tools/dom.js';
 import { registerRecorderTools } from './tools/recorder.js';
 import { registerConsoleTools } from './tools/console.js';
 import { registerUxTools } from './tools/ux.js';
+import { registerCdpTools } from './tools/cdp.js';
 import { resolveCdpPort } from './cdp/discover.js';
 
 export function buildContext({ env = process.env } = {}) {
@@ -64,6 +65,7 @@ export function createServer(ctx) {
   registerRecorderTools(server, ctx);
   registerConsoleTools(server, ctx);
   registerUxTools(server, ctx);
+  registerCdpTools(server, ctx);
   return server;
 }
 

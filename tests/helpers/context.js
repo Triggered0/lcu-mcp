@@ -15,10 +15,20 @@ export function fakeContext(overrides = {}) {
       statusSnapshot: () => ({ attached: false, port: 8888, targetId: null, targetTitle: null, lastError: null }),
       evaluate: async () => ({ value: null, exceptionDetails: null }),
       domQuery: async () => null,
+      captureScreenshot: async ({ format = 'png' } = {}) => ({ data: 'ZmFrZQ==', format }),
       getPort: async () => 8888,
       close: () => {}
     },
     discoverPage: async () => ({ id: 'P1', title: 'League of Legends' }),
+    listTargets: async () => [
+      {
+        id: 'P1',
+        type: 'page',
+        title: 'League of Legends',
+        url: 'https://127.0.0.1/index.html',
+        webSocketDebuggerUrl: 'ws://127.0.0.1:8888/devtools/page/P1'
+      }
+    ],
     resolvePort: async () => ({ port: 8888, source: 'fake' }),
     tap: {
       statusSnapshot: () => ({ running: false, connected: false, filters: [], attempts: 0, buffered: buffer.length, lastError: null }),
