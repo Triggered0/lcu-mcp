@@ -72,17 +72,41 @@ test('evaluate returns the by-value result', async () => {
     assert.equal(msg.params.returnByValue, true);
     return { result: { result: { type: 'number', value: 42 } } };
   };
-  assert.equal(await client.evaluate('1 + 41'), 42);
+  assert.deepEqual(await client.evaluate('1 + 41'), { value: 42, exceptionDetails: null });
   client.close();
 });
 
-test('evaluate surfaces a page exception as an error', async () => {
+test('evaluate returns a page exception as structured data, not a throw', async () => {
   const { client, sockets } = harness();
   await client.attach();
   sockets[0].responder = () => ({
-    result: { exceptionDetails: { exception: { description: 'ReferenceError: nope is not defined' } } }
+    result: {
+      exceptionDetails: {
+        text: 'Uncaught',
+        lineNumber: 3,
+        columnNumber: 11,
+        exception: { description: 'ReferenceError: nope is not defined' },
+        stackTrace: { callFrames: [{ functionName: 'probe', url: 'p.js', lineNumber: 3, columnNumber: 11 }] }
+      }
+    }
   });
-  await assert.rejects(client.evaluate('nope'), /ReferenceError: nope is not defined/);
+  const result = await client.evaluate('nope');
+  assert.equal(result.value, undefined);
+  assert.equal(result.exceptionDetails.description, 'ReferenceError: nope is not defined');
+  assert.equal(result.exceptionDetails.lineNumber, 3);
+  assert.deepEqual(result.exceptionDetails.stackTrace, [
+    { functionName: 'probe', url: 'p.js', lineNumber: 3, columnNumber: 11 }
+  ]);
+  client.close();
+});
+
+test('domQuery still throws on a page exception', async () => {
+  const { client, sockets } = harness();
+  await client.attach();
+  sockets[0].responder = () => ({
+    result: { exceptionDetails: { exception: { description: 'SyntaxError: bad selector' } } }
+  });
+  await assert.rejects(client.domQuery('.x'), /SyntaxError: bad selector/);
   client.close();
 });
 

@@ -127,6 +127,9 @@ export class CdpClient {
     }
   }
 
+  // A page exception is data, not a failure: the whole point of evaluating a
+  // probe is to learn what the page thinks, and "it threw, here is the stack"
+  // is an answer. domQuery, whose contract is a value, throws on it instead.
   async evaluate(expression, { awaitPromise = false } = {}) {
     const result = await this.send('Runtime.evaluate', {
       expression,
@@ -134,14 +137,23 @@ export class CdpClient {
       awaitPromise,
       userGesture: true
     });
-    if (result.exceptionDetails) {
-      const detail =
-        result.exceptionDetails.exception?.description ??
-        result.exceptionDetails.text ??
-        'unknown page exception';
-      throw new Error(`Page threw: ${detail}`);
-    }
-    return result.result?.value;
+    if (!result.exceptionDetails) return { value: result.result?.value, exceptionDetails: null };
+    const details = result.exceptionDetails;
+    return {
+      value: result.result?.value,
+      exceptionDetails: {
+        text: details.text ?? null,
+        description: details.exception?.description ?? null,
+        lineNumber: details.lineNumber ?? null,
+        columnNumber: details.columnNumber ?? null,
+        stackTrace: (details.stackTrace?.callFrames ?? []).slice(0, 10).map((f) => ({
+          functionName: f.functionName,
+          url: f.url,
+          lineNumber: f.lineNumber,
+          columnNumber: f.columnNumber
+        }))
+      }
+    };
   }
 
   async domQuery(selector, { all = false, props = [] } = {}) {
@@ -161,7 +173,11 @@ export class CdpClient {
       const nodes = Array.from(document.querySelectorAll(sel));
       return ${all ? 'nodes.map(describe)' : 'nodes.length ? describe(nodes[0]) : null'};
     })()`;
-    return this.evaluate(expression);
+    const { value, exceptionDetails } = await this.evaluate(expression);
+    if (exceptionDetails) {
+      throw new Error(`Page threw: ${exceptionDetails.description ?? exceptionDetails.text ?? 'unknown page exception'}`);
+    }
+    return value;
   }
 
   statusSnapshot() {

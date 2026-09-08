@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { redactSecrets } from '../redact.js';
 import { fail, guard, ok } from './result.js';
 
 export function registerDomTools(server, ctx) {
@@ -43,7 +44,19 @@ export function registerDomTools(server, ctx) {
             'and lol_request instead.'
         );
       }
-      return ok({ value: await ctx.cdp.evaluate(expression, { awaitPromise }) });
+      const { value, exceptionDetails } = await ctx.cdp.evaluate(expression, { awaitPromise });
+      // guard() only redacts thrown errors, and exceptionDetails is a success
+      // payload, so it has to be scrubbed here.
+      const secrets = ctx.secrets?.() ?? [];
+      const safeDetails =
+        exceptionDetails === null
+          ? null
+          : {
+              ...exceptionDetails,
+              text: redactSecrets(exceptionDetails.text, secrets),
+              description: redactSecrets(exceptionDetails.description, secrets)
+            };
+      return ok({ value, exceptionDetails: safeDetails });
     }, ctx)
   );
 }

@@ -12,7 +12,7 @@ export function fakeContext(overrides = {}) {
     },
     cdp: {
       statusSnapshot: () => ({ attached: false, port: 8888, targetId: null, targetTitle: null, lastError: null }),
-      evaluate: async () => null,
+      evaluate: async () => ({ value: null, exceptionDetails: null }),
       domQuery: async () => null
     },
     tap: {

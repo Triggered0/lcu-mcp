@@ -5,6 +5,7 @@ import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createServer } from '../src/index.js';
 import { CdpUnavailableError } from '../src/cdp/discover.js';
 import { fakeContext } from './helpers/context.js';
+import { registerDomTools } from '../src/tools/dom.js';
 
 function cdpContext({ allowEval = true } = {}) {
   const calls = [];
@@ -18,7 +19,7 @@ function cdpContext({ allowEval = true } = {}) {
     },
     evaluate: async (expression, options) => {
       calls.push({ kind: 'evaluate', expression, options });
-      return { phase: 'ReadyCheck' };
+      return { value: { phase: 'ReadyCheck' }, exceptionDetails: null };
     }
   };
   return { ctx, calls };
@@ -63,7 +64,7 @@ test('lol_eval evaluates and returns the value', async () => {
     name: 'lol_eval',
     arguments: { expression: "fetch('/lol-gameflow/v1/session').then(r => r.json())", awaitPromise: true }
   });
-  assert.deepEqual(JSON.parse(result.content[0].text), { value: { phase: 'ReadyCheck' } });
+  assert.deepEqual(JSON.parse(result.content[0].text), { value: { phase: 'ReadyCheck' }, exceptionDetails: null });
   assert.equal(calls[0].options.awaitPromise, true);
   await client.close();
 });
@@ -88,4 +89,48 @@ test('a CDP outage surfaces the Pengu fix, not a socket error', async () => {
   assert.equal(result.isError, true);
   assert.match(result.content[0].text, /RemoteDebuggingPort/);
   await client.close();
+});
+
+test('lol_eval returns a page exception as data rather than a tool error', async () => {
+  // Wire the same fake cdp this file already uses, with evaluate resolving to
+  // an exceptionDetails payload.
+  const ctx = {
+    config: { allowEval: true, configPath: 'config/allowlist.json' },
+    cdp: {
+      evaluate: async () => ({
+        value: undefined,
+        exceptionDetails: { description: 'TypeError: socket is null', lineNumber: 12, stackTrace: [] }
+      })
+    },
+    secrets: () => []
+  };
+  const handlers = new Map();
+  registerDomTools({ registerTool: (name, _meta, handler) => handlers.set(name, handler) }, ctx);
+  const result = await handlers.get('lol_eval')({ expression: 'probe.socket.readyState' });
+  assert.notEqual(result.isError, true, 'a page exception is data, not a tool failure');
+  const payload = JSON.parse(result.content[0].text);
+  assert.equal(payload.exceptionDetails.description, 'TypeError: socket is null');
+});
+
+test('a password in a page exception never reaches the tool result', async () => {
+  const ctx = {
+    config: { allowEval: true, configPath: 'config/allowlist.json' },
+    cdp: {
+      evaluate: async () => ({
+        value: undefined,
+        exceptionDetails: {
+          text: 'failed on wss://riot:super-secret-pw@127.0.0.1:1/',
+          description: 'Error: wss://riot:super-secret-pw@127.0.0.1:1/',
+          lineNumber: 1,
+          columnNumber: 1,
+          stackTrace: []
+        }
+      })
+    },
+    secrets: () => ['super-secret-pw']
+  };
+  const handlers = new Map();
+  registerDomTools({ registerTool: (name, _meta, handler) => handlers.set(name, handler) }, ctx);
+  const result = await handlers.get('lol_eval')({ expression: 'x' });
+  assert.ok(!result.content[0].text.includes('super-secret-pw'));
 });
