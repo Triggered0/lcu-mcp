@@ -25,11 +25,11 @@
   - `listTargets(port: number): Promise<Array<object>>`
   - `CdpClient.prototype.captureScreenshot(options?: { format?: string, quality?: number, clip?: object }): Promise<{ data: string, format: string }>`
 
-- [ ] **Step 1: Write failing tests in `tests/cdp-discover.test.js` and `tests/cdp-client.test.js`**
-- [ ] **Step 2: Run tests to verify failure**
-- [ ] **Step 3: Implement `listTargets` and `captureScreenshot`**
-- [ ] **Step 4: Run tests to verify pass**
-- [ ] **Step 5: Commit changes**
+- [x] **Step 1: Write failing tests in `tests/cdp-discover.test.js` and `tests/cdp-client.test.js`**
+- [x] **Step 2: Run tests to verify failure**
+- [x] **Step 3: Implement `listTargets` and `captureScreenshot`**
+- [x] **Step 4: Run tests to verify pass**
+- [x] **Step 5: Commit changes**
 
 ---
 
@@ -46,9 +46,9 @@
   - `registerCdpTools(server, ctx)` exposing `lol_cdp_targets` and `lol_cdp_screenshot`.
   - Updated server tool list with 18 tools total.
 
-- [ ] **Step 1: Write failing tests in `tests/tools-cdp.test.js`**
-- [ ] **Step 2: Run tests to verify failure**
-- [ ] **Step 3: Implement tool registrations with MCP image and text responses**
-- [ ] **Step 4: Run tests to verify pass**
-- [ ] **Step 5: Run full test suite (`npm test`)**
-- [ ] **Step 6: Commit changes**
+- [x] **Step 1: Write failing tests in `tests/tools-cdp.test.js`**
+- [x] **Step 2: Run tests to verify failure**
+- [x] **Step 3: Implement tool registrations with MCP image and text responses**
+- [x] **Step 4: Run tests to verify pass**
+- [x] **Step 5: Run full test suite (`npm test`)**
+- [x] **Step 6: Commit changes**

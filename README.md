@@ -2,9 +2,9 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D24-brightgreen.svg)](https://nodejs.org)
-[![Tests](https://img.shields.io/badge/tests-120%20passing-brightgreen.svg)](#development)
+[![Tests](https://img.shields.io/badge/tests-299%20passing-brightgreen.svg)](#development)
 
-An [MCP](https://modelcontextprotocol.io) server that exposes a running League of Legends client to any MCP host — the LCU REST API, its live `OnJsonApiEvent` stream, and the client UI's own DOM and JavaScript context, as nine tools over stdio.
+An [MCP](https://modelcontextprotocol.io) server that exposes a running League of Legends client to any MCP host — the LCU REST API, its live `OnJsonApiEvent` stream, and the client UI's own DOM and JavaScript context, as 20 tools over stdio.
 
 Ask your assistant what queue you are in, watch champ select unfold event by event, inspect the client's DOM, or drive the client itself — without writing a line of glue code.
 

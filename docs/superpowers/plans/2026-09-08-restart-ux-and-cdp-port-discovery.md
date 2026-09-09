@@ -31,7 +31,7 @@
   - `findProcessCdpPort(options?: { execCmd?: (cmd: string) => Promise<string> }): Promise<number | null>`
   - `resolveCdpPort(options?: { config?: object, env?: object, forceRefresh?: boolean, readConfigFile?: typeof readPenguConfig, scanProcesses?: typeof findProcessCdpPort }): Promise<{ port: number, source: string }>`
 
-- [ ] **Step 1: Write the failing tests for port discovery**
+- [x] **Step 1: Write the failing tests for port discovery**
 
 Add tests to `tests/cdp-discover.test.js`:
 
@@ -116,12 +116,12 @@ test('resolveCdpPort adheres to priority order and caching', async () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `node --test tests/cdp-discover.test.js`
 Expected: FAIL with "readPenguConfig is not a function"
 
-- [ ] **Step 3: Write minimal implementation in `src/cdp/discover.js`**
+- [x] **Step 3: Write minimal implementation in `src/cdp/discover.js`**
 
 Implement `readPenguConfig`, `findProcessCdpPort`, `resolveCdpPort`, and `clearPortCache` in `src/cdp/discover.js`:
 
@@ -208,12 +208,12 @@ export async function resolveCdpPort({
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `node --test tests/cdp-discover.test.js`
 Expected: PASS all tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/cdp/discover.js tests/cdp-discover.test.js
@@ -236,7 +236,7 @@ git commit -m "feat: add dynamic cdp port discovery from pengu config and proces
   - `validateConfig`: accepts `'auto'`, `null`, or integer for `cdpPort` (default `'auto'`).
   - `CdpClient`: accepts `portResolver` callback or static `port`; exposes `async getPort()`.
 
-- [ ] **Step 1: Write failing tests for config validation and CdpClient portResolver**
+- [x] **Step 1: Write failing tests for config validation and CdpClient portResolver**
 
 In `tests/config.test.js`, add:
 ```js
@@ -276,12 +276,12 @@ test('CdpClient calls portResolver if provided', async () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `node --test tests/config.test.js tests/cdp-client.test.js`
 Expected: FAIL due to config validation rejecting `'auto'` or `client.portResolver` not resolving.
 
-- [ ] **Step 3: Implement changes in `src/config.js` and `src/cdp/client.js`**
+- [x] **Step 3: Implement changes in `src/config.js` and `src/cdp/client.js`**
 
 In `src/config.js`:
 - Change `DEFAULTS.cdpPort = 'auto'`.
@@ -312,12 +312,12 @@ if (this.portResolver) {
 const target = await this.discover(this.port);
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `node --test tests/config.test.js tests/cdp-client.test.js`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/config.js src/cdp/client.js tests/config.test.js tests/cdp-client.test.js
@@ -336,7 +336,7 @@ git commit -m "feat: support dynamic portResolver in CdpClient and auto cdpPort 
 - Consumes: `ctx.lcu`, `ctx.cdp`, `ctx.consoleTailer`, `guard`, `ok`, `fail`, `resolveCdpPort`, `findPageTarget`
 - Produces: `registerUxTools(server, ctx)`
 
-- [ ] **Step 1: Write failing tests for `lol_restart_ux`**
+- [x] **Step 1: Write failing tests for `lol_restart_ux`**
 
 Create `tests/tools-ux.test.js`:
 ```js
@@ -429,12 +429,12 @@ test('lol_restart_ux handles ECONNRESET on kill endpoint cleanly', async () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `node --test tests/tools-ux.test.js`
 Expected: FAIL with "Cannot find module '../src/tools/ux.js'"
 
-- [ ] **Step 3: Implement `src/tools/ux.js`**
+- [x] **Step 3: Implement `src/tools/ux.js`**
 
 Create `src/tools/ux.js`:
 ```js
@@ -548,12 +548,12 @@ export function registerUxTools(server, ctx) {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `node --test tests/tools-ux.test.js`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/tools/ux.js tests/tools-ux.test.js
@@ -574,7 +574,7 @@ git commit -m "feat: implement lol_restart_ux tool with readiness polling"
 - Integrates all components into `buildContext` and `createServer`.
 - Updates `lol_status` output to reflect dynamic CDP port and source.
 
-- [ ] **Step 1: Write failing test for server tool list and status snapshot**
+- [x] **Step 1: Write failing test for server tool list and status snapshot**
 
 In `tests/tools-status.test.js`:
 Update the expected list of tools to include `'lol_restart_ux'`:
@@ -602,12 +602,12 @@ Update the expected list of tools to include `'lol_restart_ux'`:
 In `tests/helpers/context.js`:
 Add `cdpPortSource: 'explicit'` or similar if needed.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `node --test tests/tools-status.test.js`
 Expected: FAIL (missing `lol_restart_ux` from tool list)
 
-- [ ] **Step 3: Implement wiring in `src/index.js` and `src/tools/status.js`**
+- [x] **Step 3: Implement wiring in `src/index.js` and `src/tools/status.js`**
 
 In `src/index.js`:
 - Import `registerUxTools` from `./tools/ux.js`.
@@ -630,12 +630,12 @@ registerUxTools(server, ctx);
 In `src/tools/status.js`:
 - Ensure `cdp` snapshot returns the active port from `cdp.port`.
 
-- [ ] **Step 4: Run all tests to verify 100% pass**
+- [x] **Step 4: Run all tests to verify 100% pass**
 
 Run: `npm test`
 Expected: All tests pass without regressions.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/index.js src/tools/status.js tests/tools-status.test.js tests/helpers/context.js

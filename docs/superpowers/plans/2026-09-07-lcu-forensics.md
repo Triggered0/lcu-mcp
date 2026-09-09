@@ -68,7 +68,7 @@
 - Consumes: nothing
 - Produces: `createClock({ epochNow?, hrNow? }) -> { now(): number, wall(): number }`. `now()` returns anchored epoch milliseconds as a float; `wall()` returns raw `Date.now()`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```js
 // tests/clock.test.js
@@ -103,12 +103,12 @@ test('now has sub-millisecond resolution', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `node --test tests/clock.test.js`
 Expected: FAIL — `Cannot find module '../src/clock.js'`
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 ```js
 // src/clock.js
@@ -129,17 +129,17 @@ export function createClock({ epochNow = Date.now, hrNow = process.hrtime.bigint
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `node --test tests/clock.test.js`
 Expected: PASS, 3 tests
 
-- [ ] **Step 5: Run the full suite**
+- [x] **Step 5: Run the full suite**
 
 Run: `npm test`
 Expected: 123 passing, 0 failing
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/clock.js tests/clock.test.js
@@ -165,7 +165,7 @@ git commit -m "feat: add an anchored epoch clock for cross-process correlation"
 
 **Why an extraction and not a generalisation:** `tests/ingest.test.js:12` asserts `decodeFrame(JSON.stringify([8, 'OnJsonApiEvent_x', { uri: '/x' }])) === null`. Loosening `decodeFrame` turns that test red, and the tempting fix deletes the one assertion protecting `LcuEventTap`. Keeping the contract byte-identical means the tap's safety is proven by tests nobody edited.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```js
 // tests/wamp-frame.test.js
@@ -233,12 +233,12 @@ test('subscribeEndpoint replaces every slash with an underscore', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `node --test tests/wamp-frame.test.js`
 Expected: FAIL — `parseWampFrame is not a function`
 
-- [ ] **Step 3: Replace `decodeFrame` in `src/lcu/ingest.js` with the extraction**
+- [x] **Step 3: Replace `decodeFrame` in `src/lcu/ingest.js` with the extraction**
 
 Delete the existing `decodeFrame` (the last function in the file, with its comment) and append:
 
@@ -290,17 +290,17 @@ export function subscribeEndpoint(uri) {
 }
 ```
 
-- [ ] **Step 4: Run both frame test files**
+- [x] **Step 4: Run both frame test files**
 
 Run: `node --test tests/wamp-frame.test.js tests/ingest.test.js`
 Expected: PASS. `tests/ingest.test.js` must be green **without having been edited** — confirm with `git diff --stat tests/ingest.test.js` printing nothing.
 
-- [ ] **Step 5: Run the full suite**
+- [x] **Step 5: Run the full suite**
 
 Run: `npm test`
 Expected: 131 passing, 0 failing
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/lcu/ingest.js tests/wamp-frame.test.js
@@ -326,7 +326,7 @@ git commit -m "refactor: extract WAMP frame parsing and add a per-URI decoder"
 
 **Why bytes as well as count:** entry size varies by two orders of magnitude across URIs — `/lol-champ-select/v1/session` pushes multi-KB payloads several times a second — so a count-only ring has unpredictable memory under a firehose.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```js
 // tests/timeline.test.js
@@ -441,12 +441,12 @@ test('clear empties the buffer and the byte total but not the seq counter', () =
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `node --test tests/timeline.test.js`
 Expected: FAIL — `Cannot find module '../src/lcu/timeline.js'`
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 ```js
 // src/lcu/timeline.js
@@ -537,17 +537,17 @@ export class TimelineBuffer {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `node --test tests/timeline.test.js`
 Expected: PASS, 11 tests
 
-- [ ] **Step 5: Run the full suite**
+- [x] **Step 5: Run the full suite**
 
 Run: `npm test`
 Expected: 142 passing, 0 failing
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/lcu/timeline.js tests/timeline.test.js
@@ -567,7 +567,7 @@ git commit -m "feat: add a dual-budget timeline buffer"
 - Consumes: nothing
 - Produces: `DEFAULTS` gains `wampRecordBufferSize: 20000`, `wampRecordMaxBytes: 67108864`, `wampRecordPayloadCap: 512`, `wampRecordFullPayloadUris: ['/lol-gameflow/v1/gameflow-phase']`, `wampRecordFile: null`, `cdpConsoleBufferSize: 5000`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `tests/config.test.js`:
 
@@ -604,12 +604,12 @@ test('wampRecordFile is null or a string path', () => {
 
 `tests/config.test.js:6` already imports `validateConfig`, so no import change is needed.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `node --test tests/config.test.js`
 Expected: FAIL — `expected 20000, got undefined`
 
-- [ ] **Step 3: Extend `src/config.js`**
+- [x] **Step 3: Extend `src/config.js`**
 
 Add to `DEFAULTS`:
 
@@ -647,7 +647,7 @@ Add to `validateConfig`, after the existing `eventBufferSize` check and before t
   }
 ```
 
-- [ ] **Step 4: Add the same keys to `config/allowlist.json`**
+- [x] **Step 4: Add the same keys to `config/allowlist.json`**
 
 ```json
 {
@@ -667,12 +667,12 @@ Add to `validateConfig`, after the existing `eventBufferSize` check and before t
 }
 ```
 
-- [ ] **Step 5: Run the full suite**
+- [x] **Step 5: Run the full suite**
 
 Run: `npm test`
 Expected: 146 passing, 0 failing
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/config.js config/allowlist.json tests/config.test.js
@@ -711,7 +711,7 @@ git commit -m "feat: add recorder and console tailer configuration keys"
 
 This task covers `start` / `open` / `event` / `stop` and the stats. Task 6 adds `close` / `error` / `gap` / `restart` and the reconnect loop.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```js
 // tests/recorder.test.js
@@ -930,12 +930,12 @@ test('a frame arriving on a superseded socket is ignored', async () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `node --test tests/recorder.test.js`
 Expected: FAIL — `Cannot find module '../src/lcu/recorder.js'`
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 ```js
 // src/lcu/recorder.js
@@ -1188,17 +1188,17 @@ export class WampRecorder {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `node --test tests/recorder.test.js`
 Expected: PASS, 12 tests
 
-- [ ] **Step 5: Run the full suite**
+- [x] **Step 5: Run the full suite**
 
 Run: `npm test`
 Expected: 158 passing, 0 failing
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/lcu/recorder.js tests/recorder.test.js
@@ -1219,7 +1219,7 @@ git commit -m "feat: add the WAMP recorder with per-URI stats and a lifecycle ti
 
 **Why this is the point of the whole feature:** "the socket died" is only an answer if the close code sits next to the last event that got through. Absence of events and a dead socket must be distinguishable in one timeline.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `tests/recorder.test.js`:
 
@@ -1321,12 +1321,12 @@ test('a password never reaches the timeline through an error entry', async () =>
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `node --test tests/recorder.test.js`
 Expected: FAIL — `backoffDelay is not a function`, and the reconnect test finds only one socket
 
-- [ ] **Step 3: Give `backoffDelay` one home**
+- [x] **Step 3: Give `backoffDelay` one home**
 
 `src/lcu/events.js` already exports a `backoffDelay`, and the recorder and the console tailer both need the same curve. Three copies is two too many, but `src/lcu/events.js` is the wrong home for something `src/cdp/` must import.
 
@@ -1347,7 +1347,7 @@ export { backoffDelay } from '../backoff.js';
 
 Confirm with `node --test tests/events-tap.test.js` before continuing: it must stay green without being edited.
 
-- [ ] **Step 4: Replace the `#onClose` placeholder with the reconnect loop**
+- [x] **Step 4: Replace the `#onClose` placeholder with the reconnect loop**
 
 Import the shared helper at the top of `src/lcu/recorder.js`:
 
@@ -1423,17 +1423,17 @@ Replace `#onClose` with:
 
 Update `stop()` and `#teardown()` to orphan the loop by adding `this.#reconnectOwner = null;` immediately after `this.#running = false;` in both.
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run: `node --test tests/recorder.test.js`
 Expected: PASS, 19 tests
 
-- [ ] **Step 6: Run the full suite**
+- [x] **Step 6: Run the full suite**
 
 Run: `npm test`
 Expected: 165 passing, 0 failing
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/backoff.js src/lcu/events.js src/lcu/recorder.js tests/recorder.test.js
@@ -1455,7 +1455,7 @@ git commit -m "feat: record socket close codes, reconnects and timeline gaps"
 - Consumes: `WampRecorder` (Tasks 5-6), `LIFECYCLE_KINDS`
 - Produces: `registerRecorderTools(server, ctx)`; `ctx.recorder`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```js
 // tests/tools-recorder.test.js
@@ -1548,12 +1548,12 @@ test('stop reports how many entries remain readable', async () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `node --test tests/tools-recorder.test.js`
 Expected: FAIL — `Cannot find module '../src/tools/recorder.js'`
 
-- [ ] **Step 3: Write `src/tools/recorder.js`**
+- [x] **Step 3: Write `src/tools/recorder.js`**
 
 ```js
 import { z } from 'zod';
@@ -1624,7 +1624,7 @@ export function registerRecorderTools(server, ctx) {
 }
 ```
 
-- [ ] **Step 4: Wire into `src/index.js`**
+- [x] **Step 4: Wire into `src/index.js`**
 
 Add imports:
 
@@ -1645,11 +1645,11 @@ Add `recorder` to the returned object, and in `createServer` add:
   registerRecorderTools(server, ctx);
 ```
 
-- [ ] **Step 5: Add recorder state to `src/tools/status.js`**
+- [x] **Step 5: Add recorder state to `src/tools/status.js`**
 
 Add `recorder: ctx.recorder.statusSnapshot(),` to the `ok({...})` object, after `events:`.
 
-- [ ] **Step 6: Update the exact-tool-set assertion**
+- [x] **Step 6: Update the exact-tool-set assertion**
 
 The expected list at `tests/tools-status.test.js:37-45` is sorted alphabetically. Append, keeping that order:
 
@@ -1662,17 +1662,17 @@ The expected list at `tests/tools-status.test.js:37-45` is sorted alphabetically
 
 Also add `recorder` to any assertion enumerating `lol_status` keys.
 
-- [ ] **Step 7: Run the full suite**
+- [x] **Step 7: Run the full suite**
 
 Run: `npm test`
 Expected: 170 passing, 0 failing
 
-- [ ] **Step 8: Verify the password stays out of status**
+- [x] **Step 8: Verify the password stays out of status**
 
 Run: `node --test --test-name-pattern="never leaks the password"`
 Expected: PASS
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add src/tools/recorder.js src/index.js src/tools/status.js tests/tools-recorder.test.js tests/tools-status.test.js
@@ -1697,7 +1697,7 @@ git commit -m "feat: expose the WAMP recorder as MCP tools"
 
 **Why:** `#handleMessage` currently drops every unsolicited event (`src/cdp/client.js:75`). Nothing can subscribe to `Runtime.consoleAPICalled` until this exists.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `tests/cdp-client.test.js`:
 
@@ -1759,12 +1759,12 @@ test('onClose fires when the live socket closes', async () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `node --test tests/cdp-client.test.js`
 Expected: FAIL — `client.on is not a function`
 
-- [ ] **Step 3: Implement the dispatch in `src/cdp/client.js`**
+- [x] **Step 3: Implement the dispatch in `src/cdp/client.js`**
 
 Add two private fields next to the existing ones:
 
@@ -1818,17 +1818,17 @@ In `#connect`, inside the existing `socket.on('close', ...)` handler, add after 
       this.#emit(this.#closeListeners, undefined);
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `node --test tests/cdp-client.test.js`
 Expected: PASS, 15 tests
 
-- [ ] **Step 5: Run the full suite**
+- [x] **Step 5: Run the full suite**
 
 Run: `npm test`
 Expected: 175 passing, 0 failing
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/cdp/client.js tests/cdp-client.test.js
@@ -1864,7 +1864,7 @@ git commit -m "feat: dispatch unsolicited CDP events to subscribers"
 An exception carries `level: 'error'` so that a `level` filter does not hide the
 loudest evidence in the buffer.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```js
 // tests/cdp-console.test.js
@@ -2059,12 +2059,12 @@ test('renderArg caps a very long argument', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `node --test tests/cdp-console.test.js`
 Expected: FAIL — `Cannot find module '../src/cdp/console.js'`
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 ```js
 // src/cdp/console.js
@@ -2243,17 +2243,17 @@ export class ConsoleTailer {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `node --test tests/cdp-console.test.js`
 Expected: PASS, 12 tests
 
-- [ ] **Step 5: Run the full suite**
+- [x] **Step 5: Run the full suite**
 
 Run: `npm test`
 Expected: 187 passing, 0 failing
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/cdp/console.js tests/cdp-console.test.js
@@ -2274,7 +2274,7 @@ git commit -m "feat: buffer CDP console output with ingest-time redaction"
 
 **Why:** capturing what happened across a reload is the entire point. The target id changes when the renderer reloads, so without a supervisor the tailer goes deaf exactly when the interesting thing happens.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `tests/cdp-console.test.js`:
 
@@ -2367,12 +2367,12 @@ test('stop orphans an in-flight re-attach loop', async () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `node --test tests/cdp-console.test.js`
 Expected: FAIL — no `reattach` entry is recorded
 
-- [ ] **Step 3: Replace the `#onDisconnect` placeholder**
+- [x] **Step 3: Replace the `#onDisconnect` placeholder**
 
 Add a private field `#lastDisconnectTs = null;` and replace `#onDisconnect`:
 
@@ -2418,17 +2418,17 @@ Add a private field `#lastDisconnectTs = null;` and replace `#onDisconnect`:
   }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `node --test tests/cdp-console.test.js`
 Expected: PASS, 17 tests
 
-- [ ] **Step 5: Run the full suite**
+- [x] **Step 5: Run the full suite**
 
 Run: `npm test`
 Expected: 192 passing, 0 failing
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/cdp/console.js tests/cdp-console.test.js
@@ -2452,7 +2452,7 @@ git commit -m "feat: re-attach the console tailer across renderer reloads"
 
 **Note:** the tailer needs its **own** `CdpClient`, separate from `ctx.cdp`, so its reconnect supervisor cannot destabilise `lol_eval` / `lol_dom_query`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```js
 // tests/tools-console.test.js
@@ -2507,12 +2507,12 @@ test('stop reports how many entries were held', async () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `node --test tests/tools-console.test.js`
 Expected: FAIL — `Cannot find module '../src/tools/console.js'`
 
-- [ ] **Step 3: Write `src/tools/console.js`**
+- [x] **Step 3: Write `src/tools/console.js`**
 
 ```js
 import { z } from 'zod';
@@ -2572,7 +2572,7 @@ export function registerConsoleTools(server, ctx) {
 }
 ```
 
-- [ ] **Step 4: Wire into `src/index.js`**
+- [x] **Step 4: Wire into `src/index.js`**
 
 Add imports:
 
@@ -2600,11 +2600,11 @@ Add `consoleTailer` to the returned object, and in `createServer` add:
   registerConsoleTools(server, ctx);
 ```
 
-- [ ] **Step 5: Add tailer state to `src/tools/status.js`**
+- [x] **Step 5: Add tailer state to `src/tools/status.js`**
 
 Add `console: ctx.consoleTailer.statusSnapshot(),` to the `ok({...})` object, after `recorder:`.
 
-- [ ] **Step 6: Update the exact-tool-set assertion**
+- [x] **Step 6: Update the exact-tool-set assertion**
 
 In `tests/tools-status.test.js`, the list is alphabetical, so these three go at the **top**, before `lol_dom_query`:
 
@@ -2617,12 +2617,12 @@ In `tests/tools-status.test.js`, the list is alphabetical, so these three go at 
 
 Also add `console` to any `lol_status` key assertion.
 
-- [ ] **Step 7: Run the full suite**
+- [x] **Step 7: Run the full suite**
 
 Run: `npm test`
 Expected: 196 passing, 0 failing
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add src/tools/console.js src/index.js src/tools/status.js tests/tools-console.test.js tests/tools-status.test.js
@@ -2651,7 +2651,7 @@ git commit -m "feat: expose the CDP console tailer as MCP tools"
 
 **Why before `exceptionDetails`:** both a wrapped ring buffer and a restarted MCP process lose the evidence silently, which is the one outcome that wastes a whole game session.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```js
 // tests/ndjson.test.js
@@ -2751,12 +2751,12 @@ test('a sink failure records an error entry and never stops the recording', asyn
 });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `node --test tests/ndjson.test.js tests/recorder.test.js`
 Expected: FAIL — `Cannot find module '../src/lcu/ndjson.js'`, `attachSink is not a function`
 
-- [ ] **Step 3: Write `src/lcu/ndjson.js`**
+- [x] **Step 3: Write `src/lcu/ndjson.js`**
 
 ```js
 import { createWriteStream } from 'node:fs';
@@ -2812,7 +2812,7 @@ export class NdjsonSink {
 }
 ```
 
-- [ ] **Step 4: Route every push through the sink in `src/lcu/recorder.js`**
+- [x] **Step 4: Route every push through the sink in `src/lcu/recorder.js`**
 
 Add a private field `#sink = null;` and this method:
 
@@ -2836,7 +2836,7 @@ Add a single choke point and replace **every** `this.#buffer.push(...)` call in 
 
 `#ingest` already uses the return value for `#countUri`, so keep `const stored = this.#push({...})` there.
 
-- [ ] **Step 5: Wire the sink in `src/index.js`**
+- [x] **Step 5: Wire the sink in `src/index.js`**
 
 After constructing the recorder:
 
@@ -2848,12 +2848,12 @@ After constructing the recorder:
 
 with `import { NdjsonSink } from './lcu/ndjson.js';` at the top.
 
-- [ ] **Step 6: Run the full suite**
+- [x] **Step 6: Run the full suite**
 
 Run: `npm test`
 Expected: 202 passing, 0 failing
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/lcu/ndjson.js src/lcu/recorder.js src/index.js tests/ndjson.test.js tests/recorder.test.js
@@ -2878,7 +2878,7 @@ git commit -m "feat: optionally append the recorded timeline to an NDJSON file"
 
 **Breaking change:** `evaluate()` no longer throws on a page exception. `domQuery` is the other caller and must throw itself to preserve its contract.
 
-- [ ] **Step 1: Update the two existing tests and add new ones**
+- [x] **Step 1: Update the two existing tests and add new ones**
 
 In `tests/cdp-client.test.js`, replace the test `'evaluate returns the by-value result'` body assertion with:
 
@@ -2951,12 +2951,12 @@ test('lol_eval returns a page exception as data rather than a tool error', async
 });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `node --test tests/cdp-client.test.js tests/tools-dom.test.js`
 Expected: FAIL — `evaluate` still throws
 
-- [ ] **Step 3: Change `evaluate` in `src/cdp/client.js`**
+- [x] **Step 3: Change `evaluate` in `src/cdp/client.js`**
 
 ```js
   // A page exception is data, not a failure: the whole point of evaluating a
@@ -3001,7 +3001,7 @@ Change the last line of `domQuery` from `return this.evaluate(expression);` to:
 
 and mark `domQuery` `async` if it is not already.
 
-- [ ] **Step 4: Update `lol_eval` in `src/tools/dom.js`**
+- [x] **Step 4: Update `lol_eval` in `src/tools/dom.js`**
 
 Change the handler's return from `ok({ value: await ctx.cdp.evaluate(...) })` to:
 
@@ -3010,7 +3010,7 @@ Change the handler's return from `ok({ value: await ctx.cdp.evaluate(...) })` to
       return ok({ value, exceptionDetails });
 ```
 
-- [ ] **Step 5: Confirm the redaction path**
+- [x] **Step 5: Confirm the redaction path**
 
 `guard()` only redacts thrown errors, so `exceptionDetails` — now a success payload — bypasses it. Add to the `lol_eval` handler, before returning:
 
@@ -3061,12 +3061,12 @@ test('a password in a page exception never reaches the tool result', async () =>
 });
 ```
 
-- [ ] **Step 6: Run the full suite**
+- [x] **Step 6: Run the full suite**
 
 Run: `npm test`
 Expected: 206 passing, 0 failing
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/cdp/client.js src/tools/dom.js tests/cdp-client.test.js tests/tools-dom.test.js
@@ -3081,7 +3081,7 @@ git commit -m "feat: return page exception details as data from lol_eval"
 - Modify: `README.md`
 - Modify: `docs/design.md`
 
-- [ ] **Step 1: Add the six new tools to the README tool table**
+- [x] **Step 1: Add the six new tools to the README tool table**
 
 After the existing `lol_eval` row:
 
@@ -3094,7 +3094,7 @@ After the existing `lol_eval` row:
 | `lol_cdp_console_stop()` | Stop and discard the console buffer |
 ```
 
-- [ ] **Step 2: Add the six config keys to the README configuration table**
+- [x] **Step 2: Add the six config keys to the README configuration table**
 
 ```markdown
 | `wampRecordBufferSize` | `20000` | Recorder timeline entry count |
@@ -3105,7 +3105,7 @@ After the existing `lol_eval` row:
 | `cdpConsoleBufferSize` | `5000` | Console tailer entry count |
 ```
 
-- [ ] **Step 3: Add a short usage note to the README**
+- [x] **Step 3: Add a short usage note to the README**
 
 ```markdown
 **Diagnosing a missing event.** `lol_wamp_record_*` runs on its own WAMP socket
@@ -3116,7 +3116,7 @@ received, or the page received and mishandled. Start both recorders *before*
 the thing you want to observe — they only hold what arrived after they started.
 ```
 
-- [ ] **Step 4: Add a paragraph to `docs/design.md` under `## Events`**
+- [x] **Step 4: Add a paragraph to `docs/design.md` under `## Events`**
 
 Point at the spec rather than repeating it:
 
@@ -3127,12 +3127,12 @@ independent recorder on its own WAMP socket — see
 separate: the recorder's only value is that nothing else can perturb it.
 ```
 
-- [ ] **Step 5: Run the full suite one last time**
+- [x] **Step 5: Run the full suite one last time**
 
 Run: `npm test`
 Expected: 206 passing, 0 failing
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add README.md docs/design.md

@@ -23,11 +23,11 @@
   - `correlateTimelines({ wampEntries, cdpEntries, limit, format }): object | string`
   - `formatNarrativeLine(entry): string`
 
-- [ ] **Step 1: Write failing tests in `tests/forensics-correlate.test.js`**
-- [ ] **Step 2: Run tests to verify failure**
-- [ ] **Step 3: Implement `src/forensics/correlate.js`**
-- [ ] **Step 4: Run tests to verify pass**
-- [ ] **Step 5: Commit changes**
+- [x] **Step 1: Write failing tests in `tests/forensics-correlate.test.js`**
+- [x] **Step 2: Run tests to verify failure**
+- [x] **Step 3: Implement `src/forensics/correlate.js`**
+- [x] **Step 4: Run tests to verify pass**
+- [x] **Step 5: Commit changes**
 
 ---
 
