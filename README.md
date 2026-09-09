@@ -1,5 +1,6 @@
 # lcu-mcp
 
+[![npm version](https://img.shields.io/npm/v/lcu-mcp.svg)](https://www.npmjs.com/package/lcu-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D24-brightgreen.svg)](https://nodejs.org)
 [![Tests](https://img.shields.io/badge/tests-300%20passing-brightgreen.svg)](#development)
