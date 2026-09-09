@@ -4,8 +4,12 @@
   "type": "module",
   "description": "MCP server for the League of Legends client: LCU REST API, live WAMP events & recording, CDP console/DOM access, and OpenAPI schema introspection",
   "license": "MIT",
-  "engines": { "node": ">=24.0.0" },
-  "bin": { "lcu-mcp": "bin/lcu-mcp.js" },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "bin": {
+    "lcu-mcp": "bin/lcu-mcp.js"
+  },
   "main": "src/index.js",
   "files": [
     "bin",
@@ -18,6 +22,7 @@
   "scripts": {
     "start": "node src/index.js",
     "test": "node --test",
+    "lint": "node scripts/lint.mjs",
     "smoke": "node scripts/smoke.mjs"
   },
   "repository": {
@@ -42,4 +47,3 @@
     "zod": "^3.25.76"
   }
 }
-
