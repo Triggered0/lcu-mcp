@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D24-brightgreen.svg)](https://nodejs.org)
-[![Tests](https://img.shields.io/badge/tests-299%20passing-brightgreen.svg)](#development)
+[![Tests](https://img.shields.io/badge/tests-300%20passing-brightgreen.svg)](#development)
 
 An [MCP](https://modelcontextprotocol.io) server that exposes a running League of Legends client to any MCP host — the LCU REST API, live WAMP events & recording, client DOM and CDP console, and OpenAPI schema introspection over stdio.
 
@@ -46,6 +46,16 @@ Windows only in practice: the default lockfile path and the Pengu integration ar
 
 ## Installation
 
+### Via `npx` (Recommended, zero install)
+
+Run directly with `npx`:
+
+```bash
+npx -y lcu-mcp
+```
+
+### From source
+
 ```bash
 git clone https://github.com/Triggered0/lcu-mcp.git
 cd lcu-mcp
@@ -59,10 +69,27 @@ Runtime dependencies are exactly three: `@modelcontextprotocol/sdk`, `zod`, and 
 ### Claude Code
 
 ```bash
+# Recommended: via npx
+claude mcp add lcu --scope user -- npx -y lcu-mcp
+
+# Or from a local clone:
 claude mcp add lcu --scope user -- node C:\path\to\lcu-mcp\src\index.js
 ```
 
 ### Any host that reads `.mcp.json`
+
+```json
+{
+  "mcpServers": {
+    "lcu": {
+      "command": "npx",
+      "args": ["-y", "lcu-mcp"]
+    }
+  }
+}
+```
+
+Or from a local repository clone:
 
 ```json
 {

@@ -76,7 +76,7 @@ export function createServer(ctx) {
   return server;
 }
 
-async function main() {
+export async function main() {
   const ctx = buildContext({});
   const server = createServer(ctx);
   await server.connect(new StdioServerTransport());

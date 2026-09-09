@@ -1,19 +1,45 @@
 {
   "name": "lcu-mcp",
-  "version": "0.1.0",
-  "private": true,
+  "version": "0.2.0",
   "type": "module",
   "description": "MCP server for the League of Legends client: LCU REST API, live WAMP events & recording, CDP console/DOM access, and OpenAPI schema introspection",
+  "license": "MIT",
   "engines": { "node": ">=24.0.0" },
-  "bin": { "lcu-mcp": "src/index.js" },
+  "bin": { "lcu-mcp": "bin/lcu-mcp.js" },
+  "main": "src/index.js",
+  "files": [
+    "bin",
+    "src",
+    "certs",
+    "config",
+    "LICENSE",
+    "README.md"
+  ],
   "scripts": {
     "start": "node src/index.js",
     "test": "node --test",
     "smoke": "node scripts/smoke.mjs"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Triggered0/lcu-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Triggered0/lcu-mcp/issues"
+  },
+  "homepage": "https://github.com/Triggered0/lcu-mcp#readme",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "league-of-legends",
+    "lcu",
+    "riot-games",
+    "cdp"
+  ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "ws": "^8.18.0",
     "zod": "^3.25.76"
   }
 }
+

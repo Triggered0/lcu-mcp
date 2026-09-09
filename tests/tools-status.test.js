@@ -99,3 +99,9 @@ test('buildContext wires dynamic portResolver to cdp and consoleCdp', async () =
   assert.equal(ctx.cdp.port, 9876);
 });
 
+test('main is exported as a function for CLI bin execution', async () => {
+  const { main } = await import('../src/index.js');
+  assert.equal(typeof main, 'function');
+});
+
+
