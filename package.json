@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "MCP server for the League of Legends client (LCU REST + events + CEF DOM)",
+  "description": "MCP server for the League of Legends client: LCU REST, live events & recording, CDP console/DOM, and OpenAPI schema as 20 tools",
   "engines": { "node": ">=24.0.0" },
   "bin": { "lcu-mcp": "src/index.js" },
   "scripts": {
