@@ -1,0 +1,10 @@
+#!/bin/sh
+echo "Running pre-push checks (lint & test)..."
+npm run lint || {
+  echo "pre-push: lint check failed. Push aborted."
+  exit 1
+}
+npm test || {
+  echo "pre-push: test suite failed. Push aborted."
+  exit 1
+}
