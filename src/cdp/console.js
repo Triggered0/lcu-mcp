@@ -157,7 +157,7 @@ export class ConsoleTailer {
     }
   }
 
-  tail({ cursor = 0, since = null, until = null, limit = 100, level = null, targetId = null, text = null } = {}) {
+  tail({ cursor = 0, since = null, until = null, limit = 100, level = null, levels = null, targetId = null, text = null } = {}) {
     if (!this.#running) {
       throw new Error(
         'The console tailer is not running, so there is nothing to tail. An empty result here ' +
@@ -166,11 +166,13 @@ export class ConsoleTailer {
       );
     }
     const needle = text === null ? null : text.toLowerCase();
+    const allowedLevels = levels ? new Set(levels) : null;
     // A reattach is context for whatever is being read, not noise: it survives
     // every filter except an explicit kinds selection.
     const predicate = (e) => {
       if (e.kind === 'reattach') return true;
       if (level !== null && e.level !== level) return false;
+      if (allowedLevels !== null && !allowedLevels.has(e.level)) return false;
       if (targetId !== null && e.targetId !== targetId) return false;
       if (needle !== null) {
         const haystack = `${e.args ?? ''} ${e.text ?? ''} ${e.description ?? ''}`.toLowerCase();

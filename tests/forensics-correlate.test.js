@@ -300,3 +300,27 @@ test('correlateTimelines summary format on empty input returns zeros', () => {
     lastTs: null
   });
 });
+
+test('correlateTimelines filters cdp entries by levels', () => {
+  const wampEntries = [
+    { ts: 10, wallTs: 10, kind: 'event', uri: '/test', data: 'ok' }
+  ];
+  const cdpEntries = [
+    { ts: 20, wallTs: 20, kind: 'console', level: 'info', text: 'info msg' },
+    { ts: 30, wallTs: 30, kind: 'console', level: 'error', text: 'error msg' },
+    { ts: 40, wallTs: 40, kind: 'reattach' }
+  ];
+
+  const result = correlateTimelines({
+    wampEntries,
+    cdpEntries,
+    levels: ['error'],
+    format: 'events'
+  });
+
+  assert.equal(result.length, 3);
+  assert.equal(result[0].source, 'wamp');
+  assert.equal(result[1].summary, '[error] error msg');
+  assert.equal(result[2].kind, 'reattach');
+});
+

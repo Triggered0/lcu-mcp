@@ -48,6 +48,7 @@ export function registerForensicsTools(server, ctx) {
           wampEntries,
           cdpEntries,
           limit,
+          levels,
           format
         });
 

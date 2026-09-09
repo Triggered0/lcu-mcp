@@ -215,3 +215,26 @@ test('createServer integrates lol_forensics_correlate over MCP transport', async
   await client.close();
 });
 
+test('filters cdp entries by levels in narrative output', async () => {
+  const { handlers } = register({
+    recorder: {
+      dump: () => ({ entries: [] })
+    },
+    consoleTailer: {
+      tail: () => ({
+        entries: [
+          { ts: 1000, wallTs: 1700000001000, kind: 'console', level: 'info', text: 'ignore me' },
+          { ts: 1005, wallTs: 1700000001005, kind: 'console', level: 'error', text: 'catch me' }
+        ]
+      })
+    }
+  });
+
+  const tool = handlers.get('lol_forensics_correlate');
+  const result = await tool({ levels: ['error'] });
+  assert.equal(result.isError, undefined);
+  assert.ok(!result.content[0].text.includes('ignore me'));
+  assert.ok(result.content[0].text.includes('catch me'));
+});
+
+

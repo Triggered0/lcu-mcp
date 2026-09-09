@@ -88,10 +88,16 @@ export function correlateTimelines({
   wampEntries = [],
   cdpEntries = [],
   limit = 100,
+  levels = null,
   format = 'narrative'
 } = {}) {
   const wamp = Array.isArray(wampEntries) ? wampEntries.map(normalizeWampEntry) : [];
-  const cdp = Array.isArray(cdpEntries) ? cdpEntries.map(normalizeCdpEntry) : [];
+  let cdp = Array.isArray(cdpEntries) ? cdpEntries.map(normalizeCdpEntry) : [];
+
+  if (levels && Array.isArray(levels) && levels.length > 0) {
+    const allowed = new Set(levels);
+    cdp = cdp.filter((e) => e.kind === 'reattach' || (e.level && allowed.has(e.level)));
+  }
 
   const combined = [...wamp, ...cdp];
   combined.sort((a, b) => {

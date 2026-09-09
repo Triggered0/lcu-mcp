@@ -274,3 +274,20 @@ test('stop orphans an in-flight re-attach loop', async () => {
 
   assert.equal(cdp.sent.length, before, 'nothing was sent after stop');
 });
+
+test('tail filters by levels array and preserves reattach', async () => {
+  const { cdp, tailer } = harness();
+  await tailer.start();
+  cdp.emit('Runtime.consoleAPICalled', consoleEvent({ type: 'log', args: [{ type: 'string', value: 'a log' }] }));
+  cdp.emit('Runtime.consoleAPICalled', consoleEvent({ type: 'warning', args: [{ type: 'string', value: 'a warning' }] }));
+  cdp.emit('Runtime.consoleAPICalled', consoleEvent({ type: 'error', args: [{ type: 'string', value: 'an error' }] }));
+  cdp.emitClose();
+  await new Promise((r) => setImmediate(r));
+  await new Promise((r) => setImmediate(r));
+
+  const { entries } = tailer.tail({ levels: ['warning', 'error'], limit: 100 });
+  const kindsAndLevels = entries.map((e) => (e.kind === 'reattach' ? 'reattach' : e.level));
+  assert.deepEqual(kindsAndLevels, ['warning', 'error', 'reattach']);
+  tailer.stop();
+});
+
