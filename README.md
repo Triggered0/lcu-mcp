@@ -161,6 +161,7 @@ Nothing here needs a Riot API key or an internet connection: every call goes to 
 | `lol_game_events(afterId?)` | Retrieve in-game events (kills, objectives, aces) with incremental cursor support |
 | `lol_restart_ux(waitForReady?, timeoutSeconds?)` | Safely restart client CEF renderers with readiness polling |
 | `lol_cdp_targets()` | List all active CDP debugging targets (pages, popups, workers) |
+| `lol_cdp_screenshot(targetId?, format?, quality?, savePath?)` | Capture client screenshot via CDP (returns MCP image + disk save) |
 | `lol_schema(path?, method?, model?, refresh?)` | Query internal LCU OpenAPI/Swagger v2 schemas and models |
 | `lol_forensics_correlate(since?, until?, limit?, sources?, uriPrefix?, levels?, networkFailedOnly?, logLevel?, format?)` | Correlate telemetry across all 5 streams (WAMP, CDP console, CDP network, disk logs, live game) on a shared time axis |
 | `lol_forensics_bundle(since?, until?, limit?, sources?, includeLogTail?, format?)` | Generate an end-to-end diagnostic snapshot combining system status, active timeline streams, and disk log fallbacks |

@@ -173,6 +173,8 @@ await record('forensics tools (correlate & bundle)', async () => {
     return `correlate: ${correlateSummary.total} events, bundle: LCU ${bundleData.status?.lcu?.connected ? 'connected' : 'disconnected'}`;
   } finally {
     await client.close();
+    serverCtx.networkTailer?.stop?.();
+    serverCtx.consoleTailer?.stop?.();
     serverCtx.lcu?.close?.();
     serverCtx.cdp?.close?.();
     serverCtx.gameClient?.close?.();
