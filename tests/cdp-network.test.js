@@ -423,3 +423,94 @@ test('a reattach entry survives every filter', async () => {
   assert.deepEqual(entries.map((e) => e.kind), ['reattach'], 'a renderer restart is context for whatever you are reading');
 });
 
+test('summary throws when the tailer is not running', async () => {
+  const tailer = new NetworkTailer({ cdp: createCdp(), config: CONFIG, delay: async () => {} });
+  assert.throws(() => tailer.summary(), /not running/);
+});
+
+test('summary collapses repeated polls into one group', async () => {
+  const cdp = createCdp();
+  const tailer = new NetworkTailer({ cdp, config: CONFIG, delay: async () => {} });
+  await tailer.start();
+
+  for (let i = 0; i < 5; i += 1) {
+    sendRequest(cdp, { id: `p${i}`, url: 'https://127.0.0.1:1/lol-gameflow/v1/gameflow-phase', ts: 100 });
+    respond(cdp, { id: `p${i}`, status: 200 });
+    finish(cdp, { id: `p${i}`, ts: 100.002, bytes: 100 });
+  }
+  sendRequest(cdp, { id: 'other', url: 'https://127.0.0.1:1/lol-summoner/v1/current-summoner' });
+  respond(cdp, { id: 'other', status: 200 });
+  finish(cdp, { id: 'other', bytes: 494 });
+
+  const { total, groups } = tailer.summary();
+
+  assert.equal(total, 6);
+  assert.equal(groups.length, 2);
+  assert.equal(groups[0].count, 5, 'groups are ordered by count, busiest first');
+  assert.equal(groups[0].url, 'https://127.0.0.1:1/lol-gameflow/v1/gameflow-phase');
+  assert.equal(groups[0].method, 'GET');
+  assert.deepEqual(groups[0].statuses, { 200: 5 });
+  assert.equal(groups[0].totalBytes, 500);
+  assert.equal(groups[0].p50DurationMs, 2);
+});
+
+test('summary strips the query string when grouping', async () => {
+  const cdp = createCdp();
+  const tailer = new NetworkTailer({ cdp, config: CONFIG, delay: async () => {} });
+  await tailer.start();
+
+  sendRequest(cdp, { id: '1', url: 'https://127.0.0.1:1/lol-x?a=1' });
+  finish(cdp, { id: '1' });
+  sendRequest(cdp, { id: '2', url: 'https://127.0.0.1:1/lol-x?a=2' });
+  finish(cdp, { id: '2' });
+
+  const { groups } = tailer.summary();
+  assert.equal(groups.length, 1);
+  assert.equal(groups[0].url, 'https://127.0.0.1:1/lol-x');
+  assert.equal(groups[0].count, 2);
+});
+
+test('summary counts failures and mixed statuses separately', async () => {
+  const cdp = createCdp();
+  const tailer = new NetworkTailer({ cdp, config: CONFIG, delay: async () => {} });
+  await tailer.start();
+
+  sendRequest(cdp, { id: '1', url: 'https://127.0.0.1:1/lol-x' });
+  respond(cdp, { id: '1', status: 200 });
+  finish(cdp, { id: '1' });
+  sendRequest(cdp, { id: '2', url: 'https://127.0.0.1:1/lol-x' });
+  respond(cdp, { id: '2', status: 500 });
+  finish(cdp, { id: '2' });
+  sendRequest(cdp, { id: '3', url: 'https://127.0.0.1:1/lol-x' });
+  cdp.emit('Network.loadingFailed', { requestId: '3', timestamp: 100.01, errorText: 'net::ERR_ABORTED' });
+
+  const { groups } = tailer.summary();
+  assert.deepEqual(groups[0].statuses, { 200: 1, 500: 1, failed: 1 });
+});
+
+test('summary honours urlContains and method filters', async () => {
+  const cdp = createCdp();
+  const tailer = new NetworkTailer({ cdp, config: CONFIG, delay: async () => {} });
+  await tailer.start();
+
+  sendRequest(cdp, { id: '1', url: 'https://127.0.0.1:1/lol-a' });
+  finish(cdp, { id: '1' });
+  sendRequest(cdp, { id: '2', url: 'https://127.0.0.1:1/lol-b', method: 'POST' });
+  finish(cdp, { id: '2' });
+
+  assert.equal(tailer.summary({ urlContains: 'lol-b' }).groups.length, 1);
+  assert.equal(tailer.summary({ method: 'post' }).groups[0].url, 'https://127.0.0.1:1/lol-b');
+});
+
+test('summary excludes reattach entries', async () => {
+  const cdp = createCdp();
+  const tailer = new NetworkTailer({ cdp, config: CONFIG, delay: async () => {} });
+  await tailer.start();
+  cdp.targetId = 'T2';
+  cdp.emitClose();
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.deepEqual(tailer.summary(), { total: 0, groups: [] });
+});
+
+

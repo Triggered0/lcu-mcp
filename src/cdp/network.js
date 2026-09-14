@@ -27,6 +27,14 @@ function initiatorTop(initiator) {
   };
 }
 
+// Lower median: with an even count this returns the lower of the two middle
+// values rather than interpolating, which keeps the result an observed duration.
+function median(values) {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[Math.floor((sorted.length - 1) / 2)];
+}
+
 export class NetworkTailer {
   #buffer = null;
   // CDP reports a request across three events. Holding the partial record here
@@ -260,6 +268,52 @@ export class NetworkTailer {
         url: this.#cleanUrl(p.url),
         startedAt: p.startedAt
       }))
+    };
+  }
+
+  summary({ since = null, until = null, urlContains = null, method = null } = {}) {
+    if (!this.#running) {
+      throw new Error(
+        'The network tailer is not running, so there is nothing to summarise. ' +
+          'Call lol_cdp_network_start first.'
+      );
+    }
+    const needle = urlContains === null ? null : urlContains.toLowerCase();
+    const wantMethod = method === null ? null : String(method).toUpperCase();
+    const predicate = (e) =>
+      e.kind === 'request' &&
+      (wantMethod === null || e.method === wantMethod) &&
+      (needle === null || String(e.url ?? '').toLowerCase().includes(needle));
+
+    const { entries } = this.#buffer.select({
+      cursor: 0,
+      since,
+      until,
+      limit: Number.MAX_SAFE_INTEGER,
+      predicate
+    });
+
+    const groups = new Map();
+    for (const entry of entries) {
+      const url = String(entry.url ?? '').split('?')[0];
+      const key = `${entry.method} ${url}`;
+      let group = groups.get(key);
+      if (!group) {
+        group = { method: entry.method, url, count: 0, statuses: {}, totalBytes: 0, durations: [] };
+        groups.set(key, group);
+      }
+      group.count += 1;
+      const label = entry.failed ? 'failed' : String(entry.status ?? 'unknown');
+      group.statuses[label] = (group.statuses[label] ?? 0) + 1;
+      group.totalBytes += entry.bytes ?? 0;
+      if (typeof entry.durationMs === 'number') group.durations.push(entry.durationMs);
+    }
+
+    return {
+      total: entries.length,
+      groups: [...groups.values()]
+        .map(({ durations, ...group }) => ({ ...group, p50DurationMs: median(durations) }))
+        .sort((a, b) => b.count - a.count)
     };
   }
 
