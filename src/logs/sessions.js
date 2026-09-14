@@ -30,7 +30,10 @@ export class LogSessionFinder {
         return join(sessionPath, r3d);
       }
       const dir = join(this.#logsDir, 'LeagueClient Logs');
-      return join(dir, sessionName);
+      const logPath = join(dir, sessionName);
+      const s = await stat(logPath).catch(() => null);
+      if (!s) throw new Error(`Log file "${sessionName}" not found in ${dir}`);
+      return logPath;
     }
 
     const sessions = await this.findSessions(target, 1);

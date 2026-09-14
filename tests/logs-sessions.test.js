@@ -122,6 +122,11 @@ test('LogSessionFinder handles missing directories and throws for nonexistent lo
       () => finder.resolveActiveLogFile('game', 'nonexistent-session'),
       /No r3dlog found in session nonexistent-session/
     );
+
+    await assert.rejects(
+      () => finder.resolveActiveLogFile('client', 'nonexistent.log'),
+      /Log file "nonexistent\.log" not found/
+    );
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }
