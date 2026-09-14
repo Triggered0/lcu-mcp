@@ -38,6 +38,12 @@ export function registerUxTools(server, ctx) {
           .max(60)
           .default(20)
           .describe('Maximum seconds to wait for UX readiness when waitForReady is true')
+      },
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: false,
+        openWorldHint: true
       }
     },
     guard(async ({ waitForReady = true, timeoutSeconds = 20 } = {}) => {

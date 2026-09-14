@@ -13,6 +13,12 @@ export function registerEndpointsTool(server, ctx) {
         'a case-insensitive substring matched against verb, path, group, and description.',
       inputSchema: {
         filter: z.string().optional().describe('e.g. "champ-select", "ready-check", "summoner"')
+      },
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false
       }
     },
     guard(async ({ filter }) => {

@@ -16,6 +16,12 @@ export function registerEventTools(server, ctx) {
           .array(z.string().startsWith('/'))
           .optional()
           .describe('URI prefixes, e.g. ["/lol-champ-select/", "/lol-gameflow/"]')
+      },
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true
       }
     },
     guard(async ({ filters = [] }) => {
@@ -44,6 +50,12 @@ export function registerEventTools(server, ctx) {
         since: z.number().int().min(0).optional().describe('cursor from the previous poll; omit to start at 0'),
         limit: z.number().int().min(1).max(500).optional().describe('max entries to return, default 100'),
         filter: z.string().optional().describe('extra URI prefix applied at poll time')
+      },
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false
       }
     },
     guard(async ({ since = 0, limit = 100, filter = null }) => {
@@ -57,7 +69,13 @@ export function registerEventTools(server, ctx) {
     {
       title: 'Stop buffering LCU events',
       description: 'Close the event tap. Buffered entries stay readable with lol_events_poll.',
-      inputSchema: {}
+      inputSchema: {},
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true
+      }
     },
     guard(async () => {
       ctx.tap.stop();

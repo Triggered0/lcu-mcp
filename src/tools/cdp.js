@@ -11,7 +11,13 @@ export function registerCdpTools(server, ctx) {
       title: 'List CDP debugging targets',
       description:
         'List all active CDP debugging targets (pages, popups, background workers) exposed by the League Client.',
-      inputSchema: {}
+      inputSchema: {},
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true
+      }
     },
     guard(async () => {
       const port = (await ctx.cdp?.getPort?.()) ?? ctx.config?.cdpPort ?? 8888;
@@ -32,6 +38,12 @@ export function registerCdpTools(server, ctx) {
         format: z.enum(['png', 'jpeg', 'webp']).default('png').describe('Image format'),
         quality: z.number().int().min(0).max(100).optional().describe('Compression quality for jpeg/webp'),
         savePath: z.string().optional().describe('Optional file path to save screenshot on disk')
+      },
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: false,
+        openWorldHint: true
       }
     },
     guard(async ({ targetId, format = 'png', quality, savePath } = {}) => {

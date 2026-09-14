@@ -13,6 +13,12 @@ export function registerSchemaTools(server, ctx) {
         method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']).optional().describe('Filter operations by HTTP method'),
         model: z.string().optional().describe('Look up a specific definition/model schema name (e.g. "LolLobbyLobbyDto")'),
         refresh: z.boolean().default(false).describe('Force re-fetch the swagger schema from the League Client')
+      },
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true
       }
     },
     guard(async ({ path, method, model, refresh = false } = {}) => {

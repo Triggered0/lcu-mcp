@@ -14,7 +14,13 @@ export function registerPassthroughTools(server, ctx) {
       description:
         'GET any LCU path and return { status, body }. Always allowed. ' +
         'Use lol_endpoints to discover the paths this client is known to expose.',
-      inputSchema: { path: pathSchema }
+      inputSchema: { path: pathSchema },
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true
+      }
     },
     guard(async ({ path }) => ok(await ctx.lcu.get(path)), ctx)
   );
@@ -31,6 +37,12 @@ export function registerPassthroughTools(server, ctx) {
         method: z.enum(['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE']),
         path: pathSchema,
         body: z.unknown().optional().describe('JSON request body; omit for verbs that take none')
+      },
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: false,
+        openWorldHint: true
       }
     },
     guard(async ({ method, path, body }) => {

@@ -23,6 +23,12 @@ export function registerRecorderTools(server, ctx) {
           .optional()
           .describe('subscribe per URI instead of the firehose, e.g. ["/lol-gameflow/v1/gameflow-phase"]'),
         restart: z.boolean().optional().describe('discard a running recording and start a fresh one')
+      },
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: false,
+        openWorldHint: true
       }
     },
     guard(async ({ uris = [], restart = false }) => ok(await ctx.recorder.start({ uris, restart })), ctx)
@@ -45,6 +51,12 @@ export function registerRecorderTools(server, ctx) {
         kinds: z.array(z.enum(KINDS)).optional().describe('restrict to these entry kinds'),
         limit: z.number().int().min(1).max(2000).optional().describe('max entries, default 100'),
         cursor: z.number().int().min(0).optional().describe('seq cursor from a previous dump')
+      },
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false
       }
     },
     guard(
@@ -59,7 +71,13 @@ export function registerRecorderTools(server, ctx) {
     {
       title: 'Stop recording LCU WAMP traffic',
       description: 'Close the recorder socket. The recorded timeline stays readable with lol_wamp_record_dump.',
-      inputSchema: {}
+      inputSchema: {},
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true
+      }
     },
     guard(async () => ok(ctx.recorder.stop('tool')), ctx)
   );

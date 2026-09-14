@@ -9,7 +9,13 @@ export function registerStatusTool(server, ctx) {
         'Health of both subsystems: LCU (lockfile-derived port, connected state) and CDP ' +
         '(Pengu remote debugging port, attached target), plus event tap state and effective config. ' +
         'Call this first when another tool fails.',
-      inputSchema: {}
+      inputSchema: {},
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false
+      }
     },
     guard(
       async () =>

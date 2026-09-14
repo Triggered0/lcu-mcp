@@ -13,7 +13,13 @@ export function registerConsoleTools(server, ctx) {
         'target itself is destroyed and recreated — the client UI restarting — does the tailer ' +
         're-attach, and it records a "reattach" entry for that. Call this BEFORE the thing you ' +
         'want to capture: the buffer only holds what arrived after it started.',
-      inputSchema: {}
+      inputSchema: {},
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true
+      }
     },
     guard(async () => ok(await ctx.consoleTailer.start()), ctx)
   );
@@ -36,6 +42,12 @@ export function registerConsoleTools(server, ctx) {
         level: z.string().optional().describe('console severity, e.g. "error" or "warning"'),
         targetId: z.string().optional().describe('restrict to one renderer incarnation'),
         text: z.string().optional().describe('case-insensitive substring of the message')
+      },
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false
       }
     },
     guard(
@@ -50,7 +62,13 @@ export function registerConsoleTools(server, ctx) {
     {
       title: 'Stop tailing the client console',
       description: 'Detach and close the tailer socket. Buffered entries are discarded with it.',
-      inputSchema: {}
+      inputSchema: {},
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: true,
+        openWorldHint: true
+      }
     },
     guard(async () => ok(ctx.consoleTailer.stop()), ctx)
   );

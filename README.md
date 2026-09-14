@@ -4,7 +4,7 @@
 [![npm version](https://img.shields.io/npm/v/lcu-mcp.svg)](https://www.npmjs.com/package/lcu-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D24-brightgreen.svg)](https://nodejs.org)
-[![Tests](https://img.shields.io/badge/tests-300%20passing-brightgreen.svg)](#development)
+[![Tests](https://img.shields.io/badge/tests-302%20passing-brightgreen.svg)](#development)
 
 An [MCP](https://modelcontextprotocol.io) server that exposes a running League of Legends client to any MCP host — the LCU REST API, live WAMP events & recording, client DOM and CDP console, and OpenAPI schema introspection over stdio.
 

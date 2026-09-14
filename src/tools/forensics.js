@@ -20,6 +20,12 @@ export function registerForensicsTools(server, ctx) {
           .optional()
           .describe('Filter CDP console entries by level'),
         format: z.enum(['narrative', 'events', 'summary']).default('narrative').describe('Output format')
+      },
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false
       }
     },
     guard(

@@ -18,6 +18,12 @@ export function registerDomTools(server, ctx) {
           .array(z.string())
           .optional()
           .describe('extra element properties or attributes to include, e.g. ["disabled", "href"]')
+      },
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true
       }
     },
     guard(async ({ selector, all = false, props = [] }) => ok(await ctx.cdp.domQuery(selector, { all, props })), ctx)
@@ -34,6 +40,12 @@ export function registerDomTools(server, ctx) {
       inputSchema: {
         expression: z.string().min(1).describe('a JavaScript expression, not a statement list'),
         awaitPromise: z.boolean().optional().describe('true to await a returned promise')
+      },
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: false,
+        openWorldHint: true
       }
     },
     guard(async ({ expression, awaitPromise = false }) => {
