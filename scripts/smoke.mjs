@@ -9,6 +9,8 @@ import { LcuStaticService } from '../src/lcu/static.js';
 import { CdpClient } from '../src/cdp/client.js';
 import { probeVersion } from '../src/cdp/discover.js';
 import { NetworkTailer } from '../src/cdp/network.js';
+import { LogSessionFinder } from '../src/logs/sessions.js';
+import { LogReader } from '../src/logs/reader.js';
 
 const results = [];
 // A stage that cannot prove anything is neither a pass nor a failure: throwing
@@ -33,6 +35,11 @@ const tap = new LcuEventTap({ client: lcu, buffer });
 const staticData = new LcuStaticService({ client: lcu });
 const cdp = new CdpClient({ port: config.cdpPort });
 const networkTailer = new NetworkTailer({ cdp: new CdpClient({ port: config.cdpPort }), config });
+const logFinder = new LogSessionFinder({ lockfilePath: lcu.lockfilePath, logsDir: config.logsDir });
+const logReader = new LogReader({
+  finder: logFinder,
+  secrets: () => (lcu.currentPassword() ? [lcu.currentPassword()] : []),
+});
 
 await record('lockfile', async () => {
   const creds = await lcu.credentials();
@@ -112,6 +119,15 @@ await record('CDP network tailer', async () => {
   const summary = networkTailer.summary();
   networkTailer.stop();
   return `${entries.length} gameflow request(s), ${summary.groups.length} endpoint group(s), ${hit.durationMs}ms`;
+});
+
+await record('disk log tailer', async () => {
+  const sessions = await logFinder.findSessions('client', 1);
+  if (sessions.length === 0) {
+    throw new Inconclusive('no client log sessions found on disk');
+  }
+  const result = await logReader.tail({ target: 'client', lines: 5 });
+  return `${result.entries.length} line(s) read from ${result.filePath}`;
 });
 
 cdp.close();

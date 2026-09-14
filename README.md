@@ -150,6 +150,11 @@ Nothing here needs a Riot API key or an internet connection: every call goes to 
 | `lol_cdp_network_body(requestId)` | Fetch one response body from the live renderer |
 | `lol_cdp_network_summary(since?, until?, urlContains?, method?)` | Aggregate requests by method and url |
 | `lol_cdp_network_stop()` | Stop and discard the request buffer |
+| `lol_logs_tail(target?, lines?, session?, level?, search?)` | Tail the most recent lines of a client, UX, or game log |
+| `lol_logs_watch_start(target?)` | Begin streaming newly appended log lines into a ring buffer |
+| `lol_logs_watch_poll(cursor?, limit?, level?, search?)` | Poll newly streamed log entries |
+| `lol_logs_watch_stop()` | Stop and discard the log watcher buffer |
+| `lol_logs_sessions(target?, limit?)` | List active and historical log files on disk |
 | `lol_restart_ux(waitForReady?, timeoutSeconds?)` | Safely restart client CEF renderers with readiness polling |
 | `lol_cdp_targets()` | List all active CDP debugging targets (pages, popups, workers) |
 | `lol_cdp_screenshot(targetId?, format?, quality?, savePath?)` | Capture client screenshot via CDP (returns MCP image + disk save) |
@@ -179,6 +184,13 @@ ordinary response, not a transport failure — reach for `minStatus: 400` when y
 want everything that went wrong, and `failedOnly` only for connections that never
 completed. Response bodies are fetched on demand with `lol_cdp_network_body`, not
 buffered.
+
+**Disk logs for historical and game-engine forensics.** `lol_logs_tail` and
+`lol_logs_sessions` inspect `LeagueClient.log`, `LeagueClientUx.log`, and `GameLogs`
+(`r3dlog.txt`) directly on disk without requiring an active WebSocket or Pengu debugger.
+For live monitoring across client actions, `lol_logs_watch_start` streams newly appended
+lines from EOF into a dedicated ring buffer. All lines undergo ingest-time credential
+scrubbing and Riot auth token redaction.
 
 **Filters are URI prefixes applied at ingest.** The unfiltered firehose fills the buffer quickly, so pass something like `["/lol-champ-select/", "/lol-gameflow/"]` unless you genuinely want everything.
 
@@ -211,6 +223,8 @@ buffered.
 | `wampRecordFile` | `null` | Optional NDJSON path the timeline is appended to |
 | `cdpConsoleBufferSize` | `5000` | Console tailer entry count |
 | `cdpNetworkBufferSize` | `5000` | Network tailer entry count; about 50 minutes at the client's measured request rate |
+| `logWatchBufferSize` | `5000` | Disk log watcher ring buffer capacity |
+| `logsDir` | `null` | Optional custom logs directory override (defaults to auto-detected `Logs/`) |
 
 Allowlist matching rules:
 
@@ -283,6 +297,11 @@ src/
     client.js       # attach, evaluate, DOM query
     console.js      # buffered console tailer on its own socket
     network.js      # buffered HTTP request tailer on its own socket
+  logs/
+    parser.js       # parse log lines and redact credentials/tokens
+    sessions.js     # locate League log folders and active/past sessions
+    reader.js       # backward chunk reader from EOF
+    watcher.js      # live tailing and timeline buffering
   forensics/
     correlate.js    # merge WAMP and console timelines on one time axis
   tools/            # one module per tool group
