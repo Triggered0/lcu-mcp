@@ -28,6 +28,7 @@ import { registerCdpTools } from './tools/cdp.js';
 import { registerForensicsTools } from './tools/forensics.js';
 import { registerLogTools } from './tools/logs.js';
 import { registerGameTools } from './tools/game.js';
+import { registerWorkflowTools } from './tools/workflow.js';
 import { LiveGameClient } from './game/client.js';
 import { LogSessionFinder } from './logs/sessions.js';
 import { LogReader } from './logs/reader.js';
@@ -119,6 +120,7 @@ export function createServer(ctx) {
   registerForensicsTools(server, ctx);
   registerLogTools(server, ctx);
   registerGameTools(server, ctx);
+  registerWorkflowTools(server, ctx);
   return server;
 }
 

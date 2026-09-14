@@ -44,7 +44,11 @@ const EXPECTED = {
   lol_game_all: [true, false, true, true],
   lol_game_stats: [true, false, true, true],
   lol_game_player: [true, false, true, true],
-  lol_game_events: [true, false, true, true]
+  lol_game_events: [true, false, true, true],
+  lol_workflow_matchmaking_accept: [false, false, true, true],
+  lol_workflow_champ_select: [false, false, true, true],
+  lol_workflow_runes_set: [false, false, true, true],
+  lol_workflow_lobby: [false, false, true, true]
 };
 
 async function listTools() {

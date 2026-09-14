@@ -112,7 +112,7 @@ export async function setRunePage(
 
   return {
     success: true,
-    pageId: postRes.body?.id,
+    pageId: postRes.body?.id ?? null,
     name: targetName,
     primaryStyleId,
     subStyleId,
