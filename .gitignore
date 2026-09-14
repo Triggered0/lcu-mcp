@@ -13,6 +13,9 @@ entities.json
 # Local Claude Code permissions — personal, not shareable
 .claude/settings.local.json
 
+# Design specs and implementation plans — local working notes, not repo content
+docs/
+
 # Windows shell noise
 Thumbs.db
 desktop.ini
