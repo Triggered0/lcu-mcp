@@ -14,6 +14,7 @@ const EXPECTED = {
   lol_request: [false, true, false, true],
   lol_endpoints: [true, false, true, false],
   lol_schema: [true, false, true, true],
+  lol_static: [true, false, true, true],
   lol_events_start: [false, false, true, true],
   lol_events_poll: [true, false, true, false],
   lol_events_stop: [false, false, true, true],

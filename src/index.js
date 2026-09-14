@@ -5,6 +5,7 @@ import pkg from '../package.json' with { type: 'json' };
 import { loadConfig } from './config.js';
 import { LcuClient } from './lcu/client.js';
 import { LcuSchemaService } from './lcu/schema.js';
+import { LcuStaticService } from './lcu/static.js';
 import { RingBuffer } from './lcu/buffer.js';
 import { LcuEventTap } from './lcu/events.js';
 import { CdpClient } from './cdp/client.js';
@@ -15,6 +16,7 @@ import { registerStatusTool } from './tools/status.js';
 import { registerPassthroughTools } from './tools/passthrough.js';
 import { registerEndpointsTool } from './tools/endpoints.js';
 import { registerSchemaTools } from './tools/schema.js';
+import { registerStaticTools } from './tools/static.js';
 import { registerEventTools } from './tools/events.js';
 import { registerDomTools } from './tools/dom.js';
 import { registerRecorderTools } from './tools/recorder.js';
@@ -32,6 +34,7 @@ export function buildContext({ env = process.env } = {}) {
   };
   const lcu = new LcuClient({});
   const schema = new LcuSchemaService({ client: lcu });
+  const staticData = new LcuStaticService({ client: lcu });
   const buffer = new RingBuffer(config.eventBufferSize);
   const tap = new LcuEventTap({ client: lcu, buffer });
   const cdp = new CdpClient({ portResolver });
@@ -51,6 +54,7 @@ export function buildContext({ env = process.env } = {}) {
     config,
     lcu,
     schema,
+    staticData,
     buffer,
     tap,
     cdp,
@@ -67,6 +71,7 @@ export function createServer(ctx) {
   registerPassthroughTools(server, ctx);
   registerEndpointsTool(server, ctx);
   registerSchemaTools(server, ctx);
+  registerStaticTools(server, ctx);
   registerEventTools(server, ctx);
   registerDomTools(server, ctx);
   registerRecorderTools(server, ctx);

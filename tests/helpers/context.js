@@ -52,6 +52,10 @@ export function fakeContext(overrides = {}) {
       query: async () => ({ pathsCount: 0, definitionsCount: 0, paths: [] }),
       dereference: (node) => node
     },
+    staticData: {
+      load: async () => [],
+      query: async () => ({ kind: 'champions', total: 0, count: 0, truncated: false, entries: [] })
+    },
     secrets: () => ['S3cr3t-Pa55'],
     ...overrides
   };
