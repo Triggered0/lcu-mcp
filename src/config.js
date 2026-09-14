@@ -12,7 +12,9 @@ export const DEFAULTS = {
   wampRecordFullPayloadUris: ['/lol-gameflow/v1/gameflow-phase'],
   wampRecordFile: null,
   cdpConsoleBufferSize: 5000,
-  cdpNetworkBufferSize: 5000
+  cdpNetworkBufferSize: 5000,
+  logWatchBufferSize: 5000,
+  logsDir: null
 };
 
 export function validateConfig(raw) {
@@ -36,7 +38,8 @@ export function validateConfig(raw) {
     'wampRecordMaxBytes',
     'wampRecordPayloadCap',
     'cdpConsoleBufferSize',
-    'cdpNetworkBufferSize'
+    'cdpNetworkBufferSize',
+    'logWatchBufferSize'
   ]) {
     if (!Number.isInteger(config[key]) || config[key] < 1) {
       throw new Error(`Config "${key}" must be a positive integer, got ${JSON.stringify(config[key])}`);
@@ -50,6 +53,9 @@ export function validateConfig(raw) {
   }
   if (config.wampRecordFile !== null && typeof config.wampRecordFile !== 'string') {
     throw new Error(`Config "wampRecordFile" must be a path string or null, got ${typeof config.wampRecordFile}`);
+  }
+  if (config.logsDir !== null && typeof config.logsDir !== 'string') {
+    throw new Error(`Config "logsDir" must be a path string or null, got ${typeof config.logsDir}`);
   }
   if (!Array.isArray(config.writeAllowlist) || config.writeAllowlist.some((e) => typeof e !== 'string')) {
     throw new Error('Config "writeAllowlist" must be an array of "METHOD /path" strings');

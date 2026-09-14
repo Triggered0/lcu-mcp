@@ -1,5 +1,5 @@
 import { readdir, stat } from 'node:fs/promises';
-import { join, dirname } from 'node:path';
+import { join, dirname, basename } from 'node:path';
 import { DEFAULT_LOCKFILE_PATH } from '../lcu/lockfile.js';
 
 export class LogSessionFinder {
@@ -22,15 +22,16 @@ export class LogSessionFinder {
 
   async resolveActiveLogFile(target = 'client', sessionName = null) {
     if (sessionName) {
+      const safeName = basename(sessionName);
       if (target === 'game') {
-        const sessionPath = join(this.#logsDir, 'GameLogs', sessionName);
+        const sessionPath = join(this.#logsDir, 'GameLogs', safeName);
         const files = await readdir(sessionPath).catch(() => []);
         const r3d = files.find((f) => f.endsWith('_r3dlog.txt'));
         if (!r3d) throw new Error(`No r3dlog found in session ${sessionName}`);
         return join(sessionPath, r3d);
       }
       const dir = join(this.#logsDir, 'LeagueClient Logs');
-      const logPath = join(dir, sessionName);
+      const logPath = join(dir, safeName);
       const s = await stat(logPath).catch(() => null);
       if (!s) throw new Error(`Log file "${sessionName}" not found in ${dir}`);
       return logPath;

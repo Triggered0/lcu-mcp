@@ -131,3 +131,26 @@ test('LogSessionFinder handles missing directories and throws for nonexistent lo
     await rm(tempDir, { recursive: true, force: true });
   }
 });
+
+test('LogSessionFinder sanitizes sessionName with basename', async () => {
+  const tempDir = await mkdtemp(join(tmpdir(), 'lcu-logs-basename-'));
+  try {
+    const logsDir = join(tempDir, 'Logs');
+    const clientLogsDir = join(logsDir, 'LeagueClient Logs');
+    await mkdir(clientLogsDir, { recursive: true });
+    await writeFile(join(clientLogsDir, 'target.log'), 'content');
+
+    const finder = new LogSessionFinder({ logsDir });
+    const resolved = await finder.resolveActiveLogFile('client', '../../target.log');
+    assert.equal(resolved, join(clientLogsDir, 'target.log'));
+
+    const gameSessionDir = join(logsDir, 'GameLogs', 'session1');
+    await mkdir(gameSessionDir, { recursive: true });
+    await writeFile(join(gameSessionDir, 'session1_r3dlog.txt'), 'content');
+    const resolvedGame = await finder.resolveActiveLogFile('game', '../../session1');
+    assert.equal(resolvedGame, join(gameSessionDir, 'session1_r3dlog.txt'));
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+

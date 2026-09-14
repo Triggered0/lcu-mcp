@@ -53,6 +53,11 @@ test('the server registers exactly the tools wired so far', async () => {
     'lol_events_stop',
     'lol_forensics_correlate',
     'lol_get',
+    'lol_logs_sessions',
+    'lol_logs_tail',
+    'lol_logs_watch_poll',
+    'lol_logs_watch_start',
+    'lol_logs_watch_stop',
     'lol_request',
     'lol_restart_ux',
     'lol_schema',
@@ -73,6 +78,7 @@ test('lol_status reports both subsystems and the config', async () => {
   assert.equal(status.cdp.attached, false);
   assert.equal(status.cdp.port, 8888);
   assert.equal(status.events.running, false);
+  assert.deepEqual(status.logs, { running: false, target: null, filePath: null, offset: 0, entries: 0, droppedTotal: 0 });
   assert.equal(status.config.allowEval, true);
   assert.equal(status.config.cdpPort, 8888);
   await client.close();
@@ -105,9 +111,22 @@ test('buildContext wires dynamic portResolver to cdp and consoleCdp', async () =
   assert.equal(ctx.cdp.port, 9876);
 });
 
+test('buildContext constructs logFinder, logReader, and logWatcher', () => {
+  const ctx = buildContext({
+    env: {
+      LCU_MCP_CONFIG: 'does-not-exist-for-test.json'
+    }
+  });
+  assert.ok(ctx.logFinder);
+  assert.ok(ctx.logReader);
+  assert.ok(ctx.logWatcher);
+  assert.equal(ctx.logWatcher.statusSnapshot().running, false);
+});
+
 test('main is exported as a function for CLI bin execution', async () => {
   const { main } = await import('../src/index.js');
   assert.equal(typeof main, 'function');
 });
+
 
 

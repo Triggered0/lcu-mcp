@@ -26,6 +26,10 @@ import { registerNetworkTools } from './tools/network.js';
 import { registerUxTools } from './tools/ux.js';
 import { registerCdpTools } from './tools/cdp.js';
 import { registerForensicsTools } from './tools/forensics.js';
+import { registerLogTools } from './tools/logs.js';
+import { LogSessionFinder } from './logs/sessions.js';
+import { LogReader } from './logs/reader.js';
+import { LogWatchTailer } from './logs/watcher.js';
 import { resolveCdpPort } from './cdp/discover.js';
 
 export function buildContext({ env = process.env } = {}) {
@@ -62,6 +66,19 @@ export function buildContext({ env = process.env } = {}) {
     config,
     secrets: () => (lcu.currentPassword() ? [lcu.currentPassword()] : [])
   });
+  const logFinder = new LogSessionFinder({
+    logsDir: config.logsDir,
+    lockfilePath: lcu.lockfilePath
+  });
+  const logReader = new LogReader({
+    finder: logFinder,
+    secrets: () => (lcu.currentPassword() ? [lcu.currentPassword()] : [])
+  });
+  const logWatcher = new LogWatchTailer({
+    finder: logFinder,
+    config,
+    secrets: () => (lcu.currentPassword() ? [lcu.currentPassword()] : [])
+  });
   return {
     config,
     lcu,
@@ -73,6 +90,9 @@ export function buildContext({ env = process.env } = {}) {
     recorder,
     consoleTailer,
     networkTailer,
+    logFinder,
+    logReader,
+    logWatcher,
     // The live password, for guard() to strip out of error text. No tool returns it.
     secrets: () => (lcu.currentPassword() ? [lcu.currentPassword()] : [])
   };
@@ -93,6 +113,7 @@ export function createServer(ctx) {
   registerUxTools(server, ctx);
   registerCdpTools(server, ctx);
   registerForensicsTools(server, ctx);
+  registerLogTools(server, ctx);
   return server;
 }
 

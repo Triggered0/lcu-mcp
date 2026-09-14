@@ -26,6 +26,7 @@ export function registerStatusTool(server, ctx) {
           recorder: ctx.recorder.statusSnapshot(),
           console: ctx.consoleTailer.statusSnapshot(),
           network: ctx.networkTailer.statusSnapshot(),
+          logs: ctx.logWatcher ? ctx.logWatcher.statusSnapshot() : null,
           config: {
             configPath: ctx.config.configPath,
             cdpPort: ctx.config.cdpPort,

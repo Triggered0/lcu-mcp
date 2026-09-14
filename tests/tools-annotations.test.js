@@ -34,7 +34,12 @@ const EXPECTED = {
   lol_restart_ux: [false, true, false, true],
   lol_cdp_targets: [true, false, true, true],
   lol_cdp_screenshot: [false, true, false, true],
-  lol_forensics_correlate: [true, false, true, false]
+  lol_forensics_correlate: [true, false, true, false],
+  lol_logs_tail: [true, false, true, true],
+  lol_logs_watch_start: [false, false, true, true],
+  lol_logs_watch_poll: [true, false, true, false],
+  lol_logs_watch_stop: [false, true, true, true],
+  lol_logs_sessions: [true, false, true, true]
 };
 
 async function listTools() {

@@ -193,3 +193,52 @@ test('LogReader rejects cleanly when target log file does not exist', async () =
     await rm(tempDir, { recursive: true, force: true });
   }
 });
+
+test('LogReader strips trailing \\r from CRLF lines', async () => {
+  const tempDir = await mkdtemp(join(tmpdir(), 'lcu-reader-crlf-'));
+  try {
+    const logsDir = join(tempDir, 'Logs', 'LeagueClient Logs');
+    await mkdir(logsDir, { recursive: true });
+    const logFile = join(logsDir, '2026-09-14T12-00-00_123_LeagueClient.log');
+    await writeFile(logFile, '000000.000| ALWAYS| Initial line\r\n000001.000|   OKAY| Second line with CRLF\r\n');
+
+    const finder = new LogSessionFinder({ logsDir: join(tempDir, 'Logs') });
+    const reader = new LogReader({ finder });
+
+    const result = await reader.tail({ lines: 2 });
+    assert.equal(result.entries.length, 2);
+    for (const entry of result.entries) {
+      assert.ok(!entry.message.endsWith('\r'), `message ends with \\r: ${JSON.stringify(entry.message)}`);
+      assert.ok(!entry.raw.endsWith('\r'), `raw ends with \\r: ${JSON.stringify(entry.raw)}`);
+    }
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('LogReader strips trailing \\r even across chunk boundaries', async () => {
+  const tempDir = await mkdtemp(join(tmpdir(), 'lcu-reader-crlf-chunk-'));
+  try {
+    const logsDir = join(tempDir, 'Logs', 'LeagueClient Logs');
+    await mkdir(logsDir, { recursive: true });
+    const logFile = join(logsDir, '2026-09-14T12-00-00_123_LeagueClient.log');
+    const line1 = '000000.000| ALWAYS| ' + 'A'.repeat(50) + '\r\n';
+    const line2 = '000001.000|   OKAY| ' + 'B'.repeat(50) + '\r\n';
+    await writeFile(logFile, line1 + line2);
+
+    const finder = new LogSessionFinder({ logsDir: join(tempDir, 'Logs') });
+    for (let chunkSize = 50; chunkSize <= 70; chunkSize++) {
+      const reader = new LogReader({ finder, chunkSize });
+      const result = await reader.tail({ lines: 2 });
+      assert.equal(result.entries.length, 2);
+      for (const entry of result.entries) {
+        assert.ok(!entry.message.endsWith('\r'), `chunkSize ${chunkSize}: message ends with \\r`);
+        assert.ok(!entry.raw.endsWith('\r'), `chunkSize ${chunkSize}: raw ends with \\r`);
+      }
+    }
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+

@@ -76,6 +76,8 @@ test('the recorder and console defaults are applied', () => {
   assert.equal(config.wampRecordFile, null);
   assert.equal(config.cdpConsoleBufferSize, 5000);
   assert.equal(config.cdpNetworkBufferSize, 5000);
+  assert.equal(config.logWatchBufferSize, 5000);
+  assert.equal(config.logsDir, null);
 });
 
 test('recorder sizes must be positive integers', () => {
@@ -84,6 +86,7 @@ test('recorder sizes must be positive integers', () => {
   assert.throws(() => validateConfig({ wampRecordPayloadCap: 1.5 }), /wampRecordPayloadCap/);
   assert.throws(() => validateConfig({ cdpConsoleBufferSize: 'big' }), /cdpConsoleBufferSize/);
   assert.throws(() => validateConfig({ cdpNetworkBufferSize: 'big' }), /cdpNetworkBufferSize/);
+  assert.throws(() => validateConfig({ logWatchBufferSize: 0 }), /logWatchBufferSize/);
 });
 
 test('wampRecordFullPayloadUris must be an array of paths', () => {
@@ -97,3 +100,10 @@ test('wampRecordFile is null or a string path', () => {
   assert.equal(validateConfig({ wampRecordFile: 'C:\\tmp\\rec.ndjson' }).wampRecordFile, 'C:\\tmp\\rec.ndjson');
   assert.throws(() => validateConfig({ wampRecordFile: 7 }), /wampRecordFile/);
 });
+
+test('logsDir is null or a string path', () => {
+  assert.equal(validateConfig({ logsDir: null }).logsDir, null);
+  assert.equal(validateConfig({ logsDir: 'C:\\tmp\\Logs' }).logsDir, 'C:\\tmp\\Logs');
+  assert.throws(() => validateConfig({ logsDir: 123 }), /logsDir/);
+});
+

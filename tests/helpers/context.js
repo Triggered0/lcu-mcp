@@ -64,7 +64,22 @@ export function fakeContext(overrides = {}) {
       load: async () => [],
       query: async () => ({ kind: 'champions', total: 0, count: 0, truncated: false, entries: [] })
     },
+    logFinder: {
+      findSessions: async () => [],
+      resolveActiveLogFile: async () => 'fake.log',
+      logsDir: 'C:\\fake\\Logs'
+    },
+    logReader: {
+      tail: async () => ({ target: 'client', filePath: 'fake.log', totalSize: 0, returned: 0, entries: [] })
+    },
+    logWatcher: {
+      start: async () => ({ alreadyRunning: false, target: 'client', filePath: 'fake.log', offset: 0 }),
+      poll: () => ({ entries: [], cursor: 0, dropped: 0, remaining: 0, running: false, target: null, filePath: null }),
+      stop: async () => ({ stopped: false, entriesDiscarded: 0 }),
+      statusSnapshot: () => ({ running: false, target: null, filePath: null, offset: 0, entries: 0, droppedTotal: 0 })
+    },
     secrets: () => ['S3cr3t-Pa55'],
     ...overrides
   };
 }
+

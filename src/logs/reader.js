@@ -82,7 +82,8 @@ export class LogReader {
         for (let i = rawLines.length - 1; i >= 0; i--) {
           const rawLine = rawLines[i];
           if (!rawLine || rawLine.trim() === '') continue;
-          const parsed = parseLogLine(rawLine, baseWallTime, secretsList);
+          const cleanLine = rawLine.replace(/\r$/, '');
+          const parsed = parseLogLine(cleanLine, baseWallTime, secretsList);
           if (wantLevel && parsed.level !== wantLevel) continue;
           if (needle && !parsed.raw.toLowerCase().includes(needle)) continue;
           collectedEntries.push(parsed);
@@ -97,7 +98,8 @@ export class LogReader {
         for (let i = remainingLines.length - 1; i >= 0; i--) {
           const rawLine = remainingLines[i];
           if (!rawLine || rawLine.trim() === '') continue;
-          const parsed = parseLogLine(rawLine, baseWallTime, secretsList);
+          const cleanLine = rawLine.replace(/\r$/, '');
+          const parsed = parseLogLine(cleanLine, baseWallTime, secretsList);
           if (wantLevel && parsed.level !== wantLevel) continue;
           if (needle && !parsed.raw.toLowerCase().includes(needle)) continue;
           collectedEntries.push(parsed);
