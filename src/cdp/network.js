@@ -69,7 +69,14 @@ export class NetworkTailer {
     this.#running = true;
     this.#startedAt = this.clock.wall();
     this.#subscribe();
-    await this.#enable();
+    try {
+      await this.#enable();
+    } catch (err) {
+      this.#running = false;
+      for (const off of this.#unsubscribe) off();
+      this.#unsubscribe = [];
+      throw err;
+    }
     return { startedAt: this.#startedAt, targetId: this.#targetId, alreadyRunning: false };
   }
 
@@ -239,7 +246,7 @@ export class NetworkTailer {
           'Call lol_cdp_network_start first.'
       );
     }
-    const needle = urlContains === null ? null : urlContains.toLowerCase();
+    const needle = urlContains === null ? null : String(urlContains).toLowerCase();
     const wantMethod = method === null ? null : String(method).toUpperCase();
     // A reattach entry is context being read, not noise: it survives every filter.
     const predicate = (e) => {
@@ -278,7 +285,7 @@ export class NetworkTailer {
           'Call lol_cdp_network_start first.'
       );
     }
-    const needle = urlContains === null ? null : urlContains.toLowerCase();
+    const needle = urlContains === null ? null : String(urlContains).toLowerCase();
     const wantMethod = method === null ? null : String(method).toUpperCase();
     const predicate = (e) =>
       e.kind === 'request' &&
@@ -313,7 +320,7 @@ export class NetworkTailer {
       total: entries.length,
       groups: [...groups.values()]
         .map(({ durations, ...group }) => ({ ...group, p50DurationMs: median(durations) }))
-        .sort((a, b) => b.count - a.count)
+        .sort((a, b) => b.count - a.count || a.url.localeCompare(b.url))
     };
   }
 

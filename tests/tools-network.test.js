@@ -102,6 +102,72 @@ test('lol_cdp_network_body requires a requestId', async () => {
   await client.close();
 });
 
+test('lol_cdp_network_start invokes ctx.networkTailer.start() and returns its result', async () => {
+  let called = false;
+  const ctx = fakeContext({
+    networkTailer: {
+      start: async () => {
+        called = true;
+        return { startedAt: 12345, targetId: 'T1', alreadyRunning: false };
+      }
+    }
+  });
+
+  const { client } = await connect(ctx);
+  const result = await client.callTool({ name: 'lol_cdp_network_start', arguments: {} });
+
+  assert.equal(result.isError, undefined);
+  assert.equal(called, true);
+  const payload = JSON.parse(result.content[0].text);
+  assert.deepEqual(payload, { startedAt: 12345, targetId: 'T1', alreadyRunning: false });
+  await client.close();
+});
+
+test('lol_cdp_network_summary forwards arguments and returns its result', async () => {
+  let received = null;
+  const ctx = fakeContext({
+    networkTailer: {
+      summary: (args) => {
+        received = args;
+        return { total: 1, groups: [{ method: 'GET', url: 'https://127.0.0.1:1/lol-x', count: 1 }] };
+      }
+    }
+  });
+
+  const { client } = await connect(ctx);
+  const result = await client.callTool({
+    name: 'lol_cdp_network_summary',
+    arguments: { since: 1000, until: 2000, urlContains: 'lol-x', method: 'GET' }
+  });
+
+  assert.equal(result.isError, undefined);
+  assert.deepEqual(received, { since: 1000, until: 2000, urlContains: 'lol-x', method: 'GET' });
+  const payload = JSON.parse(result.content[0].text);
+  assert.deepEqual(payload, { total: 1, groups: [{ method: 'GET', url: 'https://127.0.0.1:1/lol-x', count: 1 }] });
+  await client.close();
+});
+
+test('lol_cdp_network_stop invokes ctx.networkTailer.stop() and returns its result', async () => {
+  let called = false;
+  const ctx = fakeContext({
+    networkTailer: {
+      stop: () => {
+        called = true;
+        return { stopped: true, entries: 15 };
+      }
+    }
+  });
+
+  const { client } = await connect(ctx);
+  const result = await client.callTool({ name: 'lol_cdp_network_stop', arguments: {} });
+
+  assert.equal(result.isError, undefined);
+  assert.equal(called, true);
+  const payload = JSON.parse(result.content[0].text);
+  assert.deepEqual(payload, { stopped: true, entries: 15 });
+  await client.close();
+});
+
 test('a tailer error comes back through the guard', async () => {
   const ctx = fakeContext({
     networkTailer: {

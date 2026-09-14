@@ -104,6 +104,25 @@ test('start is idempotent and does not re-enable', async () => {
   assert.deepEqual(cdp.sent.map((s) => s.method), ['Network.enable']);
 });
 
+test('start cleans up and allows retry when enable fails', async () => {
+  const cdp = createCdp();
+  cdp.attach = async () => {
+    throw new Error('CDP attach failed');
+  };
+  const tailer = makeTailer(cdp);
+
+  await assert.rejects(() => tailer.start(), /CDP attach failed/);
+  assert.equal(tailer.statusSnapshot().running, false);
+
+  // Retry after fixing attach should succeed cleanly
+  cdp.attach = async () => {
+    cdp.attached = true;
+  };
+  const started = await tailer.start();
+  assert.equal(started.alreadyRunning, false);
+  assert.equal(tailer.statusSnapshot().running, true);
+});
+
 test('a completed request produces exactly one entry', async () => {
   const cdp = createCdp();
   const tailer = makeTailer(cdp);
@@ -511,6 +530,47 @@ test('summary excludes reattach entries', async () => {
   await new Promise((resolve) => setImmediate(resolve));
 
   assert.deepEqual(tailer.summary(), { total: 0, groups: [] });
+});
+
+test('summary sorts by count descending, then by url ascending on ties', async () => {
+  const cdp = createCdp();
+  const tailer = makeTailer(cdp);
+  await tailer.start();
+
+  sendRequest(cdp, { id: '1', url: 'https://127.0.0.1:1/lol-z' });
+  finish(cdp, { id: '1' });
+
+  sendRequest(cdp, { id: '2', url: 'https://127.0.0.1:1/lol-a' });
+  finish(cdp, { id: '2' });
+
+  sendRequest(cdp, { id: '3', url: 'https://127.0.0.1:1/lol-m' });
+  finish(cdp, { id: '3' });
+
+  const { groups } = tailer.summary();
+  assert.equal(groups.length, 3);
+  assert.equal(groups[0].count, 1);
+  assert.equal(groups[1].count, 1);
+  assert.equal(groups[2].count, 1);
+  assert.deepEqual(groups.map((g) => g.url), [
+    'https://127.0.0.1:1/lol-a',
+    'https://127.0.0.1:1/lol-m',
+    'https://127.0.0.1:1/lol-z'
+  ]);
+});
+
+test('tail and summary coerce non-null urlContains to string safely', async () => {
+  const cdp = createCdp();
+  const tailer = makeTailer(cdp);
+  await tailer.start();
+
+  sendRequest(cdp, { id: '1', url: 'https://127.0.0.1:1/lol-123' });
+  finish(cdp, { id: '1' });
+
+  const tailed = tailer.tail({ urlContains: 123 });
+  assert.equal(tailed.entries.length, 1);
+
+  const summarised = tailer.summary({ urlContains: 123 });
+  assert.equal(summarised.groups.length, 1);
 });
 
 test('body throws when the tailer is not running', async () => {
