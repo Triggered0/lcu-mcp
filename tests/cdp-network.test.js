@@ -324,3 +324,102 @@ test('a reattach entry records the target change and clears in-flight requests',
   assert.equal(tailer.statusSnapshot().inflight, 0, 'requestIds do not survive a reattach');
 });
 
+async function tailerWithTraffic() {
+  const cdp = createCdp();
+  const tailer = new NetworkTailer({ cdp, config: CONFIG, delay: async () => {} });
+  await tailer.start();
+
+  sendRequest(cdp, { id: 'a', url: 'https://127.0.0.1:1/lol-summoner/v1/current-summoner' });
+  respond(cdp, { id: 'a', status: 200 });
+  finish(cdp, { id: 'a' });
+
+  sendRequest(cdp, { id: 'b', url: 'https://127.0.0.1:1/lol-missing', method: 'POST', postData: '{}' });
+  respond(cdp, { id: 'b', status: 404 });
+  finish(cdp, { id: 'b' });
+
+  sendRequest(cdp, { id: 'c', url: 'https://127.0.0.1:1/lol-gone' });
+  cdp.emit('Network.loadingFailed', { requestId: 'c', timestamp: 100.01, errorText: 'net::ERR_ABORTED' });
+
+  return { cdp, tailer };
+}
+
+test('tail throws when the tailer is not running', async () => {
+  const tailer = new NetworkTailer({ cdp: createCdp(), config: CONFIG, delay: async () => {} });
+  assert.throws(() => tailer.tail(), /not running/);
+});
+
+test('tail returns every entry by default', async () => {
+  const { tailer } = await tailerWithTraffic();
+  assert.equal(tailer.tail().entries.length, 3);
+});
+
+test('urlContains matches case-insensitively', async () => {
+  const { tailer } = await tailerWithTraffic();
+  const { entries } = tailer.tail({ urlContains: 'SUMMONER' });
+  assert.deepEqual(entries.map((e) => e.requestId), ['a']);
+});
+
+test('method is matched case-insensitively', async () => {
+  const { tailer } = await tailerWithTraffic();
+  assert.deepEqual(tailer.tail({ method: 'post' }).entries.map((e) => e.requestId), ['b']);
+});
+
+test('status matches exactly', async () => {
+  const { tailer } = await tailerWithTraffic();
+  assert.deepEqual(tailer.tail({ status: 404 }).entries.map((e) => e.requestId), ['b']);
+});
+
+test('minStatus catches the 4xx that failedOnly misses', async () => {
+  const { tailer } = await tailerWithTraffic();
+
+  assert.deepEqual(tailer.tail({ failedOnly: true }).entries.map((e) => e.requestId), ['c']);
+  assert.deepEqual(
+    tailer.tail({ minStatus: 400 }).entries.map((e) => e.requestId),
+    ['b'],
+    'a 404 arrives as an ordinary response, so failedOnly alone would answer "what broke" wrongly'
+  );
+});
+
+test('a cursor returns only what is new', async () => {
+  const { cdp, tailer } = await tailerWithTraffic();
+  const first = tailer.tail();
+
+  sendRequest(cdp, { id: 'd' });
+  finish(cdp, { id: 'd' });
+
+  const second = tailer.tail({ cursor: first.cursor });
+  assert.deepEqual(second.entries.map((e) => e.requestId), ['d']);
+});
+
+test('limit caps the page and reports the remainder', async () => {
+  const { tailer } = await tailerWithTraffic();
+  const page = tailer.tail({ limit: 2 });
+  assert.equal(page.entries.length, 2);
+  assert.equal(page.remaining, 1);
+});
+
+test('in-flight requests are reported outside the buffer', async () => {
+  const cdp = createCdp();
+  const tailer = new NetworkTailer({ cdp, config: CONFIG, delay: async () => {} });
+  await tailer.start();
+
+  sendRequest(cdp, { id: 'hung', url: 'https://127.0.0.1:1/lol-slow' });
+
+  const page = tailer.tail();
+  assert.equal(page.entries.length, 0);
+  assert.deepEqual(page.inflight.map((r) => r.requestId), ['hung'], 'a hung request must still be visible');
+  assert.equal(page.inflight[0].url, 'https://127.0.0.1:1/lol-slow');
+});
+
+test('a reattach entry survives every filter', async () => {
+  const cdp = createCdp();
+  const tailer = new NetworkTailer({ cdp, config: CONFIG, delay: async () => {} });
+  await tailer.start();
+  cdp.targetId = 'T2';
+  cdp.emitClose();
+  await new Promise((resolve) => setImmediate(resolve));
+
+  const { entries } = tailer.tail({ method: 'GET', minStatus: 500 });
+  assert.deepEqual(entries.map((e) => e.kind), ['reattach'], 'a renderer restart is context for whatever you are reading');
+});
+

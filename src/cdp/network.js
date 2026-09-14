@@ -211,9 +211,56 @@ export class NetworkTailer {
     }
   }
 
-  // Replaced in full by Task 3.
-  tail() {
-    return this.#buffer.select({ cursor: 0, limit: 100 });
+  tail({
+    cursor = 0,
+    since = null,
+    until = null,
+    limit = 100,
+    urlContains = null,
+    method = null,
+    status = null,
+    minStatus = null,
+    type = null,
+    failedOnly = false,
+    targetId = null
+  } = {}) {
+    if (!this.#running) {
+      throw new Error(
+        'The network tailer is not running, so there is nothing to tail. An empty result here ' +
+          'would read as "the page made no requests" when the truth is "nothing was listening". ' +
+          'Call lol_cdp_network_start first.'
+      );
+    }
+    const needle = urlContains === null ? null : urlContains.toLowerCase();
+    const wantMethod = method === null ? null : String(method).toUpperCase();
+    // A reattach entry is context being read, not noise: it survives every filter.
+    const predicate = (e) => {
+      if (e.kind === 'reattach') return true;
+      if (wantMethod !== null && e.method !== wantMethod) return false;
+      if (status !== null && e.status !== status) return false;
+      if (minStatus !== null && !(typeof e.status === 'number' && e.status >= minStatus)) return false;
+      if (type !== null && e.type !== type) return false;
+      if (failedOnly && e.failed !== true) return false;
+      if (targetId !== null && e.targetId !== targetId) return false;
+      if (needle !== null && !String(e.url ?? '').toLowerCase().includes(needle)) return false;
+      return true;
+    };
+    const page = this.#buffer.select({ cursor, since, until, limit, predicate });
+    return {
+      ...page,
+      running: this.#running,
+      attached: this.cdp.statusSnapshot().attached,
+      targetId: this.#targetId,
+      startedAt: this.#startedAt,
+      // Completed requests only reach the buffer, so a request that never
+      // finishes would otherwise be invisible — exactly the one you are hunting.
+      inflight: [...this.#inflight.values()].map((p) => ({
+        requestId: p.requestId,
+        method: p.method,
+        url: this.#cleanUrl(p.url),
+        startedAt: p.startedAt
+      }))
+    };
   }
 
   stop() {
