@@ -8,6 +8,7 @@ import { LcuEventTap } from '../src/lcu/events.js';
 import { LcuStaticService } from '../src/lcu/static.js';
 import { CdpClient } from '../src/cdp/client.js';
 import { probeVersion } from '../src/cdp/discover.js';
+import { NetworkTailer } from '../src/cdp/network.js';
 
 const results = [];
 // A stage that cannot prove anything is neither a pass nor a failure: throwing
@@ -31,6 +32,7 @@ const buffer = new RingBuffer(config.eventBufferSize);
 const tap = new LcuEventTap({ client: lcu, buffer });
 const staticData = new LcuStaticService({ client: lcu });
 const cdp = new CdpClient({ port: config.cdpPort });
+const networkTailer = new NetworkTailer({ cdp: new CdpClient({ port: config.cdpPort }), config });
 
 await record('lockfile', async () => {
   const creds = await lcu.credentials();
@@ -93,6 +95,23 @@ await record('CDP page-context LCU fetch', async () => {
   );
   if (exceptionDetails) throw new Error(exceptionDetails.description ?? exceptionDetails.text);
   return `status ${value}`;
+});
+
+await record('CDP network tailer', async () => {
+  await networkTailer.start();
+  const { value } = await cdp.evaluate(
+    "fetch('/lol-gameflow/v1/gameflow-phase').then(r => r.status)",
+    { awaitPromise: true }
+  );
+  if (value !== 200) throw new Error(`probe fetch returned ${value}`);
+  // The renderer delivers the three Network events asynchronously.
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+  const { entries } = networkTailer.tail({ urlContains: 'gameflow-phase' });
+  const hit = entries.find((e) => e.status === 200);
+  if (!hit) throw new Error(`no gameflow request captured among ${entries.length} entries`);
+  const summary = networkTailer.summary();
+  networkTailer.stop();
+  return `${entries.length} gameflow request(s), ${summary.groups.length} endpoint group(s), ${hit.durationMs}ms`;
 });
 
 cdp.close();

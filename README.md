@@ -145,6 +145,11 @@ Nothing here needs a Riot API key or an internet connection: every call goes to 
 | `lol_cdp_console_start()` | Begin buffering client console output |
 | `lol_cdp_console_tail(since?, until?, cursor?, limit?, level?, targetId?, text?)` | Read buffered console entries |
 | `lol_cdp_console_stop()` | Stop and discard the console buffer |
+| `lol_cdp_network_start()` | Begin buffering the HTTP requests the client UI makes |
+| `lol_cdp_network_tail(since?, until?, cursor?, limit?, urlContains?, method?, status?, minStatus?, type?, failedOnly?, targetId?)` | Read buffered requests |
+| `lol_cdp_network_body(requestId)` | Fetch one response body from the live renderer |
+| `lol_cdp_network_summary(since?, until?, urlContains?, method?)` | Aggregate requests by method and url |
+| `lol_cdp_network_stop()` | Stop and discard the request buffer |
 | `lol_restart_ux(waitForReady?, timeoutSeconds?)` | Safely restart client CEF renderers with readiness polling |
 | `lol_cdp_targets()` | List all active CDP debugging targets (pages, popups, workers) |
 | `lol_cdp_screenshot(targetId?, format?, quality?, savePath?)` | Capture client screenshot via CDP (returns MCP image + disk save) |
@@ -165,6 +170,15 @@ when. Read it together with `lol_cdp_console_tail` and a `lol_eval` probe to
 separate three cases: the LCU never emitted, it emitted but the page never
 received, or the page received and mishandled. Start both recorders *before*
 the thing you want to observe — they only hold what arrived after they started.
+
+**Three views, one story.** `lol_wamp_record_*` shows what the LCU pushed,
+`lol_cdp_console_*` shows what the page said, and `lol_cdp_network_*` shows what
+the page asked for. Each entry names the code that issued the request, so "why
+did the client call this" has an answer rather than a guess. A 404 arrives as an
+ordinary response, not a transport failure — reach for `minStatus: 400` when you
+want everything that went wrong, and `failedOnly` only for connections that never
+completed. Response bodies are fetched on demand with `lol_cdp_network_body`, not
+buffered.
 
 **Filters are URI prefixes applied at ingest.** The unfiltered firehose fills the buffer quickly, so pass something like `["/lol-champ-select/", "/lol-gameflow/"]` unless you genuinely want everything.
 
@@ -196,6 +210,7 @@ the thing you want to observe — they only hold what arrived after they started
 | `wampRecordFullPayloadUris` | `["/lol-gameflow/v1/gameflow-phase"]` | URI prefixes exempt from the payload cap |
 | `wampRecordFile` | `null` | Optional NDJSON path the timeline is appended to |
 | `cdpConsoleBufferSize` | `5000` | Console tailer entry count |
+| `cdpNetworkBufferSize` | `5000` | Network tailer entry count; about 50 minutes at the client's measured request rate |
 
 Allowlist matching rules:
 
@@ -267,6 +282,7 @@ src/
     discover.js     # probe the debugging port, pick and redact the target
     client.js       # attach, evaluate, DOM query
     console.js      # buffered console tailer on its own socket
+    network.js      # buffered HTTP request tailer on its own socket
   forensics/
     correlate.js    # merge WAMP and console timelines on one time axis
   tools/            # one module per tool group
