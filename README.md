@@ -22,6 +22,7 @@ Ask your assistant what queue you are in, watch champ select unfold event by eve
 - [Security](#security)
 - [Development](#development)
 - [Troubleshooting](#troubleshooting)
+- [Privacy](#privacy)
 - [Disclaimer](#disclaimer)
 - [License](#license)
 
@@ -246,6 +247,10 @@ tests/              # one test file per source module
 | `lol_events_poll` returns nothing | Usually an idle client, not a fault. Navigate the UI and poll again; check `running` in the response. |
 | A write is refused | The verb and path are not on the allowlist. The error message contains the exact line to add. |
 | TLS errors on every REST call | The vendored CA is wrong or stale. Fix the PEM — never disable verification. |
+
+## Privacy
+
+lcu-mcp runs locally, talks only to `127.0.0.1`, and collects nothing. What it reads from the client flows to the MCP host you connected — see [PRIVACY.md](PRIVACY.md).
 
 ## Disclaimer
 

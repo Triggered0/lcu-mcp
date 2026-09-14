@@ -17,7 +17,8 @@
     "certs",
     "config",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "PRIVACY.md"
   ],
   "scripts": {
     "start": "node src/index.js",
