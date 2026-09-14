@@ -97,3 +97,103 @@ test('load requires a client', async () => {
   const service = new LcuStaticService({});
   await assert.rejects(() => service.load('champions'), /LCU client is required/);
 });
+
+const ROSTER = [
+  { id: -1, name: 'None', alias: 'None', roles: [] },
+  { id: 1, name: 'Annie', alias: 'Annie', roles: ['mage', 'support'] },
+  { id: 157, name: 'Yasuo', alias: 'Yasuo', roles: ['fighter', 'assassin'] },
+  { id: 800, name: 'Mel', alias: 'Mel', roles: ['mage'] }
+];
+
+function rosterService() {
+  return new LcuStaticService({ client: createClient({ [CHAMPIONS]: ROSTER }) });
+}
+
+test('query by ids returns the matching entries projected to id and name', async () => {
+  const result = await rosterService().query({ kind: 'champions', ids: [157] });
+
+  assert.equal(result.kind, 'champions');
+  assert.equal(result.total, 4);
+  assert.equal(result.count, 1);
+  assert.equal(result.truncated, false);
+  assert.deepEqual(result.entries, [{ id: 157, name: 'Yasuo' }]);
+  assert.deepEqual(result.missing, []);
+});
+
+test('query reports ids with no matching entry', async () => {
+  const result = await rosterService().query({ kind: 'champions', ids: [157, 99999] });
+
+  assert.deepEqual(result.entries, [{ id: 157, name: 'Yasuo' }]);
+  assert.deepEqual(result.missing, [99999], 'a dropped id would invite a false conclusion');
+});
+
+test('query resolves sentinel ids rather than filtering them out', async () => {
+  const result = await rosterService().query({ kind: 'champions', ids: [-1] });
+
+  assert.deepEqual(result.entries, [{ id: -1, name: 'None' }]);
+  assert.deepEqual(result.missing, []);
+});
+
+test('query matches names case-insensitively on a substring', async () => {
+  const result = await rosterService().query({ kind: 'champions', query: 'ya' });
+
+  assert.deepEqual(result.entries, [{ id: 157, name: 'Yasuo' }]);
+});
+
+test('query omits missing when no ids were supplied', async () => {
+  const result = await rosterService().query({ kind: 'champions', query: 'ya' });
+  assert.equal('missing' in result, false);
+});
+
+test('ids and query compose as a conjunction', async () => {
+  const result = await rosterService().query({ kind: 'champions', ids: [1, 157], query: 'yas' });
+
+  assert.deepEqual(result.entries, [{ id: 157, name: 'Yasuo' }]);
+  assert.deepEqual(result.missing, [], 'Annie was filtered by query, not missing from the document');
+});
+
+test('fields widens the projection and ignores unknown keys', async () => {
+  const result = await rosterService().query({
+    kind: 'champions',
+    ids: [157],
+    fields: ['roles', 'nonexistent']
+  });
+
+  assert.deepEqual(result.entries, [{ id: 157, name: 'Yasuo', roles: ['fighter', 'assassin'] }]);
+});
+
+test('limit truncates and offset pages past it', async () => {
+  const first = await rosterService().query({ kind: 'champions', limit: 2 });
+  assert.equal(first.count, 2);
+  assert.equal(first.truncated, true);
+  assert.deepEqual(first.entries.map((e) => e.id), [-1, 1]);
+
+  const second = await rosterService().query({ kind: 'champions', limit: 2, offset: 2 });
+  assert.equal(second.truncated, false);
+  assert.deepEqual(second.entries.map((e) => e.id), [157, 800]);
+});
+
+test('an offset past the end returns nothing and is not truncated', async () => {
+  const result = await rosterService().query({ kind: 'champions', limit: 10, offset: 99 });
+
+  assert.equal(result.count, 0);
+  assert.equal(result.truncated, false);
+});
+
+test('query with no filters returns the first page plus the true total', async () => {
+  const result = await rosterService().query({ kind: 'champions' });
+
+  assert.equal(result.total, 4);
+  assert.equal(result.count, 4);
+  assert.equal(result.truncated, false);
+});
+
+test('query forwards refresh to load', async () => {
+  const client = createClient({ [CHAMPIONS]: ROSTER });
+  const service = new LcuStaticService({ client });
+
+  await service.query({ kind: 'champions' });
+  await service.query({ kind: 'champions', refresh: true });
+
+  assert.deepEqual(client.calls, [CHAMPIONS, CHAMPIONS]);
+});

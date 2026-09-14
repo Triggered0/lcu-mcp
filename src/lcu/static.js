@@ -54,4 +54,53 @@ export class LcuStaticService {
     this.#docs.set(kind, data);
     return data;
   }
+
+  async query({ kind, ids, query, fields, limit = 50, offset = 0, refresh = false } = {}) {
+    const all = await this.load(kind, { refresh });
+    const total = all.length;
+
+    let matched = all;
+    let missing = null;
+
+    if (Array.isArray(ids) && ids.length > 0) {
+      const byId = new Map(all.map((entry) => [entry.id, entry]));
+      matched = [];
+      missing = [];
+      for (const id of ids) {
+        const found = byId.get(id);
+        if (found) matched.push(found);
+        else missing.push(id);
+      }
+    }
+
+    if (typeof query === 'string' && query.trim() !== '') {
+      const needle = query.trim().toLowerCase();
+      matched = matched.filter((entry) => String(entry.name ?? '').toLowerCase().includes(needle));
+    }
+
+    const window = matched.slice(offset, offset + limit);
+    const result = {
+      kind,
+      total,
+      count: window.length,
+      truncated: offset + window.length < matched.length,
+      entries: window.map((entry) => project(entry, fields))
+    };
+    // Only meaningful when the caller asked for specific ids.
+    if (missing) result.missing = missing;
+    return result;
+  }
+}
+
+// Raw entries carry dense markup — item descriptions are full of
+// <mainText><stats><attention> — which is noise unless explicitly asked for.
+function project(entry, fields) {
+  const out = { id: entry.id, name: entry.name };
+  if (Array.isArray(fields)) {
+    for (const field of fields) {
+      if (field === 'id' || field === 'name') continue;
+      if (Object.hasOwn(entry, field)) out[field] = entry[field];
+    }
+  }
+  return out;
 }
