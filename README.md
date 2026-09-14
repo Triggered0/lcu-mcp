@@ -4,7 +4,7 @@
 [![npm version](https://img.shields.io/npm/v/lcu-mcp.svg)](https://www.npmjs.com/package/lcu-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D24-brightgreen.svg)](https://nodejs.org)
-[![Tests](https://img.shields.io/badge/tests-302%20passing-brightgreen.svg)](#development)
+[![CI](https://github.com/Triggered0/lcu-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/Triggered0/lcu-mcp/actions/workflows/ci.yml)
 
 An [MCP](https://modelcontextprotocol.io) server that exposes a running League of Legends client to any MCP host — the LCU REST API, live WAMP events & recording, client DOM and CDP console, and OpenAPI schema introspection over stdio.
 
@@ -16,11 +16,13 @@ Ask your assistant what queue you are in, watch champ select unfold event by eve
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Registering with an MCP host](#registering-with-an-mcp-host)
+- [Quick start](#quick-start)
 - [Tools](#tools)
 - [Configuration](#configuration)
 - [Enabling DOM access](#enabling-dom-access)
 - [Security](#security)
 - [Development](#development)
+- [Contributing](#contributing)
 - [Troubleshooting](#troubleshooting)
 - [Privacy](#privacy)
 - [Disclaimer](#disclaimer)
@@ -106,6 +108,23 @@ Or from a local repository clone:
 
 `LCU_MCP_CONFIG` is optional; without it the server looks for `config/allowlist.json` relative to its working directory, and falls back to built-in defaults if that file does not exist.
 
+## Quick start
+
+Start the League client, then ask your assistant in plain language. A few things that work with no further setup:
+
+| Ask | What runs |
+|---|---|
+| *"Is the LCU connection healthy?"* | `lol_status` |
+| *"Who am I logged in as?"* | `lol_get("/lol-summoner/v1/current-summoner")` |
+| *"What am I doing in the client right now?"* | `lol_get("/lol-gameflow/v1/gameflow-phase")` |
+| *"Which champion is id 157?"* | `lol_static(kind="champions", ids=[157])` |
+| *"Watch champ select and tell me what happens."* | `lol_events_start(["/lol-champ-select/"])`, then `lol_events_poll` |
+| *"What does the lobby endpoint accept?"* | `lol_schema("/lol-lobby/v2/lobby")` |
+| *"Accept the ready check."* | `lol_request("POST", "/lol-matchmaking/v1/ready-check/accept")` — needs a [write allowlist](#configuration) entry |
+| *"Screenshot the client."* | `lol_cdp_screenshot` — needs [Pengu Loader](#enabling-dom-access) |
+
+Nothing here needs a Riot API key or an internet connection: every call goes to `127.0.0.1`.
+
 ## Tools
 
 | Tool | Purpose |
@@ -133,6 +152,8 @@ Or from a local repository clone:
 | `lol_forensics_correlate(since?, until?, limit?, uriPrefix?, levels?, format?)` | Correlate WAMP recorder and CDP console timelines on a shared time axis |
 
 **`lol_status` first.** When anything else fails it tells you which half is down — a closed client looks nothing like a missing Pengu install.
+
+**Ids come back raw.** Champ select, the gameflow, and match history all speak in numbers — `championId: 157`, `perk: 8008`, `queueId: 420`. `lol_static` resolves them to `Yasuo`, `Lethal Tempo`, and `Ranked Solo/Duo` from documents the client already serves locally, so no Data Dragon, no API key, and no call leaves `127.0.0.1`. It projects to `{id, name}` and pages at 50 entries by default — `items` alone is 868 entries and 667 KB raw — so widen it deliberately with `fields`, `limit`, and `offset`.
 
 **Events are polled.** `lol_events_poll` returns a `cursor`; pass it back as `since` next time. A non-zero `dropped` means the ring buffer wrapped and that many events were lost after your cursor. Entries with `truncated: true` had their `data` clipped at 4 KB — re-fetch the full body with `lol_get` on the entry's `uri`.
 
@@ -220,23 +241,43 @@ npm start       # run the server on stdio
 `npm run smoke` prints one line per stage and exits 1 if any stage fails. It is never run in CI. The event stage waits for real delivery and reports three outcomes: `PASS` when events arrived, `SKIP` when the tap connected but an idle client sent nothing, and `FAIL` when the tap could not connect.
 
 ```
+bin/lcu-mcp.js      # npx entry point
+certs/              # Riot's root CA, pinned for TLS verification
+config/             # default allowlist.json
+scripts/            # lint.mjs (syntax gate) and smoke.mjs (live check)
 src/
-  index.js          # stdio transport and tool registration
+  index.js          # stdio transport, context wiring, tool registration
   config.js         # config loading and validation
   allowlist.js      # pure write-allowlist matching
   redact.js         # strip passwords from URLs and strings
+  backoff.js        # shared reconnect schedule
+  clock.js          # injectable time source, so tests never sleep
   lcu/
     lockfile.js     # parse, read, and watch the lockfile
     client.js       # REST with the pinned CA
     buffer.js       # ring buffer with cursor and drop accounting
     ingest.js       # pure ingest policy: prefix filters, truncation
     events.js       # WebSocket tap with backoff reconnect
+    recorder.js     # independent WAMP socket for forensic recording
+    ndjson.js       # append recorded frames to disk
+    timeline.js     # query, filter, and page a recorded timeline
+    schema.js       # fetch and dereference the OpenAPI document
+    static.js       # lazy per-kind cache over the local game data documents
   cdp/
     discover.js     # probe the debugging port, pick and redact the target
     client.js       # attach, evaluate, DOM query
+    console.js      # buffered console tailer on its own socket
+  forensics/
+    correlate.js    # merge WAMP and console timelines on one time axis
   tools/            # one module per tool group
 tests/              # one test file per source module
 ```
+
+## Contributing
+
+Pull requests are welcome. The house rules are short: write the test first, keep the runtime dependency list at three, and never let a password reach a buffer, a log, or a tool return. `npm run lint && npm test` must be clean before you open the PR — see [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow.
+
+Found a security issue? Please do not open a public issue — use [private vulnerability reporting](https://github.com/Triggered0/lcu-mcp/security/advisories/new) instead, as described in [SECURITY.md](SECURITY.md).
 
 ## Troubleshooting
 
