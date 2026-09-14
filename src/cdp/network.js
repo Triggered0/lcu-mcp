@@ -317,6 +317,48 @@ export class NetworkTailer {
     };
   }
 
+  // Bodies are never buffered. Measured live: the renderer still served a body
+  // 61 seconds after the request finished, with 102 later requests in between,
+  // so fetching on demand costs nothing until someone actually asks.
+  async body(requestId) {
+    if (!this.#running) {
+      throw new Error(
+        'The network tailer is not running, so no requestId is known. ' +
+          'Call lol_cdp_network_start first.'
+      );
+    }
+    const { entries } = this.#buffer.select({
+      cursor: 0,
+      limit: Number.MAX_SAFE_INTEGER,
+      predicate: (e) => e.kind === 'request' && e.requestId === requestId
+    });
+    const entry = entries[entries.length - 1];
+    if (!entry) {
+      throw new Error(
+        `No buffered request with id ${requestId}. It was never seen, or it has been evicted from the buffer.`
+      );
+    }
+    if (entry.targetId !== this.#targetId) {
+      throw new Error(
+        `Request ${requestId} belongs to a previous renderer incarnation (${entry.targetId}); ` +
+          'the client UI has restarted since, and requestIds do not survive that, so its body ' +
+          'can no longer be fetched.'
+      );
+    }
+    const result = await this.cdp.send('Network.getResponseBody', { requestId });
+    const base64Encoded = result?.base64Encoded === true;
+    const raw = result?.body ?? '';
+    return {
+      requestId,
+      url: entry.url,
+      status: entry.status,
+      base64Encoded,
+      // Substring redaction on base64 would corrupt the payload without
+      // protecting anything, since the secret is not stored in that form.
+      body: base64Encoded ? raw : this.#cleanText(raw)
+    };
+  }
+
   stop() {
     if (!this.#running) return { stopped: false, entries: this.#buffer?.length ?? 0 };
     this.#running = false;

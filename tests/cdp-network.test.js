@@ -513,4 +513,98 @@ test('summary excludes reattach entries', async () => {
   assert.deepEqual(tailer.summary(), { total: 0, groups: [] });
 });
 
+test('body throws when the tailer is not running', async () => {
+  const tailer = new NetworkTailer({ cdp: createCdp(), config: CONFIG, delay: async () => {} });
+  await assert.rejects(() => tailer.body('1'), /not running/);
+});
+
+test('body fetches the response body on demand', async () => {
+  const cdp = createCdp();
+  cdp.bodies['1'] = { body: '"InProgress"', base64Encoded: false };
+  const tailer = new NetworkTailer({ cdp, config: CONFIG, delay: async () => {} });
+  await tailer.start();
+
+  sendRequest(cdp, { id: '1', url: 'https://127.0.0.1:1/lol-gameflow/v1/gameflow-phase' });
+  respond(cdp, { id: '1', status: 200 });
+  finish(cdp, { id: '1' });
+
+  const result = await tailer.body('1');
+
+  assert.equal(result.requestId, '1');
+  assert.equal(result.url, 'https://127.0.0.1:1/lol-gameflow/v1/gameflow-phase');
+  assert.equal(result.status, 200);
+  assert.equal(result.base64Encoded, false);
+  assert.equal(result.body, '"InProgress"');
+  assert.ok(
+    cdp.sent.some((s) => s.method === 'Network.getResponseBody' && s.params.requestId === '1'),
+    'bodies are not buffered, so this must reach the renderer'
+  );
+});
+
+test('body redacts the live password out of the payload', async () => {
+  const cdp = createCdp();
+  cdp.bodies['1'] = { body: '{"pw":"L1vePass"}', base64Encoded: false };
+  const tailer = new NetworkTailer({ cdp, config: CONFIG, delay: async () => {}, secrets: () => ['L1vePass'] });
+  await tailer.start();
+
+  sendRequest(cdp, { id: '1' });
+  finish(cdp, { id: '1' });
+
+  assert.equal((await tailer.body('1')).body, '{"pw":"***"}');
+});
+
+test('a base64 body is passed through untouched', async () => {
+  const cdp = createCdp();
+  cdp.bodies['1'] = { body: 'AAAA', base64Encoded: true };
+  const tailer = new NetworkTailer({ cdp, config: CONFIG, delay: async () => {}, secrets: () => ['AAAA'] });
+  await tailer.start();
+
+  sendRequest(cdp, { id: '1' });
+  finish(cdp, { id: '1' });
+
+  const result = await tailer.body('1');
+  assert.equal(result.base64Encoded, true);
+  assert.equal(result.body, 'AAAA', 'substring redaction on base64 would corrupt it');
+});
+
+test('body names an unknown requestId rather than returning nothing', async () => {
+  const cdp = createCdp();
+  const tailer = new NetworkTailer({ cdp, config: CONFIG, delay: async () => {} });
+  await tailer.start();
+
+  await assert.rejects(() => tailer.body('nope'), /No buffered request with id nope/);
+});
+
+test('body refuses a requestId from a previous renderer incarnation', async () => {
+  const cdp = createCdp();
+  const tailer = new NetworkTailer({ cdp, config: CONFIG, delay: async () => {} });
+  await tailer.start();
+
+  sendRequest(cdp, { id: 'old' });
+  finish(cdp, { id: 'old' });
+
+  cdp.targetId = 'T2';
+  cdp.emitClose();
+  await new Promise((resolve) => setImmediate(resolve));
+
+  await assert.rejects(
+    () => tailer.body('old'),
+    /previous renderer incarnation/,
+    'an empty body would read as "the response was empty"'
+  );
+});
+
+test('body surfaces the renderer eviction error unchanged', async () => {
+  const cdp = createCdp();
+  const tailer = new NetworkTailer({ cdp, config: CONFIG, delay: async () => {} });
+  await tailer.start();
+
+  sendRequest(cdp, { id: '1' });
+  finish(cdp, { id: '1' });
+  // cdp.bodies has no '1', so the fake throws the way the real CDP does.
+
+  await assert.rejects(() => tailer.body('1'), /No resource with given identifier found/);
+});
+
+
 
