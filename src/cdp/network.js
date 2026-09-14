@@ -163,7 +163,7 @@ export class NetworkTailer {
       startedAt: pending.startedAt,
       durationMs,
       initiator: pending.initiator === null ? null : { ...pending.initiator, url: this.#cleanUrl(pending.initiator.url) },
-      postData: typeof pending.postData === 'string' ? this.#cleanText(cap(pending.postData, POST_DATA_CAP)) : null,
+      postData: typeof pending.postData === 'string' ? cap(this.#cleanText(pending.postData), POST_DATA_CAP) : null,
       failed: outcome.failed,
       errorText: this.#cleanText(outcome.errorText)
     });

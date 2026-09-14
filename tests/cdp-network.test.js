@@ -217,3 +217,110 @@ test('stop closes the socket and reports the entry count', async () => {
   assert.equal(cdp.attached, false);
   assert.equal(tailer.stop().stopped, false, 'stopping twice is not an error');
 });
+
+test('a userinfo credential in a url is stripped structurally', async () => {
+  const cdp = createCdp();
+  // No secrets() supplied: this must still be redacted, because the credential
+  // measured in documentURL was NOT the live lockfile password.
+  const tailer = new NetworkTailer({ cdp, config: CONFIG, delay: async () => {} });
+  await tailer.start();
+
+  sendRequest(cdp, { url: 'https://riot:sTaLePassw0rd@127.0.0.1:33870/index.html' });
+  finish(cdp);
+
+  const [entry] = tailer.tail().entries;
+  assert.equal(entry.url, 'https://riot:***@127.0.0.1:33870/index.html');
+  assert.ok(!entry.url.includes('sTaLePassw0rd'));
+});
+
+test('the live password is stripped from a url that has no userinfo', async () => {
+  const cdp = createCdp();
+  const tailer = new NetworkTailer({ cdp, config: CONFIG, delay: async () => {}, secrets: () => ['L1vePass'] });
+  await tailer.start();
+
+  sendRequest(cdp, { url: 'https://127.0.0.1:1/lol-x?token=L1vePass' });
+  finish(cdp);
+
+  const [entry] = tailer.tail().entries;
+  assert.equal(entry.url, 'https://127.0.0.1:1/lol-x?token=***');
+});
+
+test('the live password is stripped from postData', async () => {
+  const cdp = createCdp();
+  const tailer = new NetworkTailer({ cdp, config: CONFIG, delay: async () => {}, secrets: () => ['L1vePass'] });
+  await tailer.start();
+
+  sendRequest(cdp, { method: 'POST', postData: '{"password":"L1vePass"}' });
+  finish(cdp);
+
+  const [entry] = tailer.tail().entries;
+  assert.equal(entry.postData, '{"password":"***"}');
+});
+
+test('the initiator url is redacted too', async () => {
+  const cdp = createCdp();
+  const tailer = new NetworkTailer({ cdp, config: CONFIG, delay: async () => {} });
+  await tailer.start();
+
+  cdp.emit('Network.requestWillBeSent', {
+    requestId: '1',
+    request: { url: 'https://127.0.0.1:1/lol-x', method: 'GET' },
+    type: 'Fetch',
+    timestamp: 100,
+    wallTime: 1700000000,
+    initiator: {
+      type: 'script',
+      stack: { callFrames: [{ functionName: 'f', url: 'https://riot:sTaLePassw0rd@127.0.0.1:1/p.js', lineNumber: 3 }] }
+    }
+  });
+  finish(cdp);
+
+  const [entry] = tailer.tail().entries;
+  assert.equal(entry.initiator.url, 'https://riot:***@127.0.0.1:1/p.js');
+  assert.equal(entry.initiator.functionName, 'f');
+  assert.equal(entry.initiator.line, 3);
+});
+
+test('postData is capped and says so', async () => {
+  const cdp = createCdp();
+  const tailer = new NetworkTailer({ cdp, config: CONFIG, delay: async () => {} });
+  await tailer.start();
+
+  sendRequest(cdp, { method: 'POST', postData: 'x'.repeat(900) });
+  finish(cdp);
+
+  const [entry] = tailer.tail().entries;
+  assert.ok(entry.postData.startsWith('x'.repeat(512)));
+  assert.match(entry.postData, /truncated from 900/);
+});
+
+test('a GET carries no postData', async () => {
+  const cdp = createCdp();
+  const tailer = new NetworkTailer({ cdp, config: CONFIG, delay: async () => {} });
+  await tailer.start();
+
+  sendRequest(cdp);
+  finish(cdp);
+
+  assert.equal(tailer.tail().entries[0].postData, null);
+});
+
+test('a reattach entry records the target change and clears in-flight requests', async () => {
+  const cdp = createCdp();
+  const tailer = new NetworkTailer({ cdp, config: CONFIG, delay: async () => {} });
+  await tailer.start();
+
+  sendRequest(cdp, { id: 'dies-with-the-target' });
+  assert.equal(tailer.statusSnapshot().inflight, 1);
+
+  cdp.targetId = 'T2';
+  cdp.emitClose();
+  await new Promise((resolve) => setImmediate(resolve));
+
+  const reattach = tailer.tail().entries.find((e) => e.kind === 'reattach');
+  assert.ok(reattach, 'a renderer restart must be visible in the timeline');
+  assert.equal(reattach.previousTargetId, 'T1');
+  assert.equal(reattach.targetId, 'T2');
+  assert.equal(tailer.statusSnapshot().inflight, 0, 'requestIds do not survive a reattach');
+});
+
