@@ -51,6 +51,7 @@ test('the server registers exactly the tools wired so far', async () => {
     'lol_events_poll',
     'lol_events_start',
     'lol_events_stop',
+    'lol_forensics_bundle',
     'lol_forensics_correlate',
     'lol_game_all',
     'lol_game_events',

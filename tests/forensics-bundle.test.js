@@ -468,3 +468,34 @@ test('does not fetch game events when game is not running', async () => {
   assert.equal(bundle.summary.sources.game, 0);
   assert.equal(getEventsCalled, false);
 });
+
+test('handles comma-separated string for sources', async () => {
+  const ctx = createMockContext();
+  const bundle = await createForensicsBundle(ctx, {
+    format: 'json',
+    sources: 'wamp, network'
+  });
+
+  assert.equal(bundle.summary.total, 2);
+  assert.equal(bundle.timeline.length, 2);
+  assert.equal(bundle.summary.sources.wamp, 1);
+  assert.equal(bundle.summary.sources.network, 1);
+  assert.equal(bundle.summary.sources.cdp, 0);
+  assert.equal(bundle.summary.sources.logs, 0);
+  assert.equal(bundle.summary.sources.game, 0);
+});
+
+test('falls back gracefully when ctx.clock.wall throws', async () => {
+  const ctx = createMockContext({
+    clock: {
+      wall: () => {
+        throw new Error('Clock failure');
+      }
+    }
+  });
+
+  const bundle = await createForensicsBundle(ctx, { format: 'json' });
+  assert.ok(typeof bundle.generatedAt === 'string');
+  assert.ok(!Number.isNaN(new Date(bundle.generatedAt).getTime()));
+});
+

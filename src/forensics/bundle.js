@@ -11,6 +11,9 @@ function allowsSource(sources, src) {
   if (!sources) return true;
   const name = String(src).toLowerCase();
   if (typeof sources === 'string') {
+    if (sources.includes(',')) {
+      return sources.split(',').map((s) => s.trim().toLowerCase()).includes(name);
+    }
     return sources.toLowerCase() === name;
   }
   if (Array.isArray(sources)) {
@@ -50,6 +53,11 @@ export async function createForensicsBundle(ctx = {}, {
   includeLogTail = true,
   format = 'markdown'
 } = {}) {
+  let activeSources = sources;
+  if (typeof activeSources === 'string' && activeSources.includes(',')) {
+    activeSources = activeSources.split(',').map((s) => s.trim()).filter(Boolean);
+  }
+
   // 1. System Status Collection
   let lcuConnected = false;
   try {
@@ -95,7 +103,7 @@ export async function createForensicsBundle(ctx = {}, {
 
   // 2. Stream Telemetry Ingest
   let wampEntries = [];
-  if (allowsSource(sources, 'wamp') && typeof ctx?.recorder?.dump === 'function') {
+  if (allowsSource(activeSources, 'wamp') && typeof ctx?.recorder?.dump === 'function') {
     try {
       const res = ctx.recorder.dump({ since, until, limit });
       wampEntries = Array.isArray(res) ? res : (res?.entries ?? []);
@@ -105,7 +113,7 @@ export async function createForensicsBundle(ctx = {}, {
   }
 
   let cdpEntries = [];
-  if (allowsSource(sources, 'cdp') && typeof ctx?.consoleTailer?.tail === 'function') {
+  if (allowsSource(activeSources, 'cdp') && typeof ctx?.consoleTailer?.tail === 'function') {
     try {
       const res = ctx.consoleTailer.tail({ since, until, limit });
       cdpEntries = Array.isArray(res) ? res : (res?.entries ?? []);
@@ -115,7 +123,7 @@ export async function createForensicsBundle(ctx = {}, {
   }
 
   let networkEntries = [];
-  if (allowsSource(sources, 'network') && typeof ctx?.networkTailer?.tail === 'function') {
+  if (allowsSource(activeSources, 'network') && typeof ctx?.networkTailer?.tail === 'function') {
     try {
       const res = ctx.networkTailer.tail({ since, until, limit });
       networkEntries = Array.isArray(res) ? res : (res?.entries ?? []);
@@ -125,7 +133,7 @@ export async function createForensicsBundle(ctx = {}, {
   }
 
   let logEntries = [];
-  if (allowsSource(sources, 'logs') && typeof ctx?.logWatcher?.poll === 'function') {
+  if (allowsSource(activeSources, 'logs') && typeof ctx?.logWatcher?.poll === 'function') {
     try {
       const res = ctx.logWatcher.poll({ limit });
       logEntries = Array.isArray(res) ? res : (res?.entries ?? []);
@@ -135,7 +143,7 @@ export async function createForensicsBundle(ctx = {}, {
   }
 
   let gameEntries = [];
-  if (allowsSource(sources, 'game') && game && typeof ctx?.gameClient?.getEvents === 'function') {
+  if (allowsSource(activeSources, 'game') && game && typeof ctx?.gameClient?.getEvents === 'function') {
     try {
       const rawEvents = await ctx.gameClient.getEvents();
       if (Array.isArray(rawEvents)) {
@@ -166,31 +174,37 @@ export async function createForensicsBundle(ctx = {}, {
     logEntries,
     gameEntries,
     limit,
-    sources,
+    sources: activeSources,
     format: 'summary'
   });
 
-  const timeline = correlateTimelines({
-    wampEntries,
-    cdpEntries,
-    networkEntries,
-    logEntries,
-    gameEntries,
-    limit,
-    sources,
-    format: 'events'
-  });
+  let timeline = null;
+  if (format === 'json') {
+    timeline = correlateTimelines({
+      wampEntries,
+      cdpEntries,
+      networkEntries,
+      logEntries,
+      gameEntries,
+      limit,
+      sources: activeSources,
+      format: 'events'
+    });
+  }
 
-  const narrative = correlateTimelines({
-    wampEntries,
-    cdpEntries,
-    networkEntries,
-    logEntries,
-    gameEntries,
-    limit,
-    sources,
-    format: 'narrative'
-  });
+  let narrative = null;
+  if (format === 'markdown') {
+    narrative = correlateTimelines({
+      wampEntries,
+      cdpEntries,
+      networkEntries,
+      logEntries,
+      gameEntries,
+      limit,
+      sources: activeSources,
+      format: 'narrative'
+    });
+  }
 
   // 4. Secret Redaction
   let secrets = [];
@@ -204,11 +218,20 @@ export async function createForensicsBundle(ctx = {}, {
     secrets = [];
   }
 
-  const generatedAt = (
-    typeof ctx?.clock?.wall === 'function'
-      ? new Date(ctx.clock.wall())
-      : new Date()
-  ).toISOString();
+  let generatedDate;
+  try {
+    if (typeof ctx?.clock?.wall === 'function') {
+      generatedDate = new Date(ctx.clock.wall());
+      if (Number.isNaN(generatedDate.getTime())) {
+        generatedDate = new Date();
+      }
+    } else {
+      generatedDate = new Date();
+    }
+  } catch {
+    generatedDate = new Date();
+  }
+  const generatedAt = generatedDate.toISOString();
 
   // 5. Format Rendering
   if (format === 'json') {
