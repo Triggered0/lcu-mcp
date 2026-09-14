@@ -180,6 +180,9 @@ test('LiveGameClient sends requests and parses responses from live server', asyn
         return true;
       }
     );
+
+    // Close agent cleanly
+    client.close();
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }

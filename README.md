@@ -155,6 +155,10 @@ Nothing here needs a Riot API key or an internet connection: every call goes to 
 | `lol_logs_watch_poll(cursor?, limit?, level?, search?)` | Poll newly streamed log entries |
 | `lol_logs_watch_stop()` | Stop and discard the log watcher buffer |
 | `lol_logs_sessions(target?, limit?)` | List active and historical log files on disk |
+| `lol_game_all(format?)` | Fetch full real-time live game state from in-match game engine (summary or raw) |
+| `lol_game_stats()` | Check match status, game clock, mode, and map terrain from the live game engine |
+| `lol_game_player(name?)` | Fetch real-time stats, abilities, items, and runes for the active or named player |
+| `lol_game_events(afterId?)` | Retrieve in-game events (kills, objectives, aces) with incremental cursor support |
 | `lol_restart_ux(waitForReady?, timeoutSeconds?)` | Safely restart client CEF renderers with readiness polling |
 | `lol_cdp_targets()` | List all active CDP debugging targets (pages, popups, workers) |
 | `lol_cdp_screenshot(targetId?, format?, quality?, savePath?)` | Capture client screenshot via CDP (returns MCP image + disk save) |
@@ -192,6 +196,14 @@ For live monitoring across client actions, `lol_logs_watch_start` streams newly 
 lines from EOF into a dedicated ring buffer. All lines undergo ingest-time credential
 scrubbing and Riot auth token redaction.
 
+**In-match game engine telemetry (`lol_game_*`).** When League enters a live match
+(loading screen, Summoner's Rift, ARAM, Practice Tool, or TFT), the game engine hosts
+an internal HTTPS server on `127.0.0.1:2999/liveclientdata`. `lol_game_all` provides a
+complete, token-efficient projection of match clock, team comparisons, scores, items,
+and vital stats (or full raw JSON via `format: 'raw'`). `lol_game_events` tracks combat
+and objective kills incrementally using `afterId`. If no match is currently running,
+tools report a clear indication rather than connection failures.
+
 **Filters are URI prefixes applied at ingest.** The unfiltered firehose fills the buffer quickly, so pass something like `["/lol-champ-select/", "/lol-gameflow/"]` unless you genuinely want everything.
 
 ## Configuration
@@ -225,6 +237,7 @@ scrubbing and Riot auth token redaction.
 | `cdpNetworkBufferSize` | `5000` | Network tailer entry count; about 50 minutes at the client's measured request rate |
 | `logWatchBufferSize` | `5000` | Disk log watcher ring buffer capacity |
 | `logsDir` | `null` | Optional custom logs directory override (defaults to auto-detected `Logs/`) |
+| `liveGamePort` | `2999` | Live Client Data API port hosted by the League of Legends game engine |
 
 Allowlist matching rules:
 
@@ -302,6 +315,9 @@ src/
     sessions.js     # locate League log folders and active/past sessions
     reader.js       # backward chunk reader from EOF
     watcher.js      # live tailing and timeline buffering
+  game/
+    client.js       # HTTPS client to in-match engine on port 2999
+    summary.js      # token-efficient projection of allgamedata
   forensics/
     correlate.js    # merge WAMP and console timelines on one time axis
   tools/            # one module per tool group

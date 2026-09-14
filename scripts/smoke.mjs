@@ -11,6 +11,7 @@ import { probeVersion } from '../src/cdp/discover.js';
 import { NetworkTailer } from '../src/cdp/network.js';
 import { LogSessionFinder } from '../src/logs/sessions.js';
 import { LogReader } from '../src/logs/reader.js';
+import { LiveGameClient } from '../src/game/client.js';
 
 const results = [];
 // A stage that cannot prove anything is neither a pass nor a failure: throwing
@@ -40,6 +41,7 @@ const logReader = new LogReader({
   finder: logFinder,
   secrets: () => (lcu.currentPassword() ? [lcu.currentPassword()] : []),
 });
+const gameClient = new LiveGameClient({ port: config.liveGamePort });
 
 await record('lockfile', async () => {
   const creds = await lcu.credentials();
@@ -130,8 +132,18 @@ await record('disk log tailer', async () => {
   return `${result.entries.length} line(s) read from ${result.filePath}`;
 });
 
+await record('live game data', async () => {
+  const running = await gameClient.isGameRunning();
+  if (!running) {
+    throw new Inconclusive('no live match currently running (only active during in-game matches)');
+  }
+  const stats = await gameClient.getGameStats();
+  return `${stats.gameMode} on ${stats.mapName} at ${stats.gameTime.toFixed(1)}s`;
+});
+
 cdp.close();
 lcu.close();
+gameClient.close();
 
 const failed = results.filter((r) => !r.ok && !r.inconclusive);
 const skipped = results.filter((r) => r.inconclusive);

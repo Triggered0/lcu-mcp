@@ -42,8 +42,11 @@ export class LiveGameClient {
     try {
       await this.getGameStats();
       return true;
-    } catch {
-      return false;
+    } catch (err) {
+      if (err instanceof GameNotRunningError) {
+        return false;
+      }
+      throw err;
     }
   }
 
@@ -131,5 +134,11 @@ export class LiveGameClient {
 
   async getEvents(afterId = null) {
     return this.request('eventdata', afterId !== null && afterId !== undefined ? { afterID: afterId } : {});
+  }
+
+  close() {
+    if (this.#agent && typeof this.#agent.destroy === 'function') {
+      this.#agent.destroy();
+    }
   }
 }
