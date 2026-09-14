@@ -165,6 +165,10 @@ Nothing here needs a Riot API key or an internet connection: every call goes to 
 | `lol_schema(path?, method?, model?, refresh?)` | Query internal LCU OpenAPI/Swagger v2 schemas and models |
 | `lol_forensics_correlate(since?, until?, limit?, sources?, uriPrefix?, levels?, networkFailedOnly?, logLevel?, format?)` | Correlate telemetry across all 5 streams (WAMP, CDP console, CDP network, disk logs, live game) on a shared time axis |
 | `lol_forensics_bundle(since?, until?, limit?, sources?, includeLogTail?, format?)` | Generate an end-to-end diagnostic snapshot combining system status, active timeline streams, and disk log fallbacks |
+| `lol_workflow_matchmaking_accept()` | Accept matchmaking ready check if active and unaccepted |
+| `lol_workflow_champ_select(champion, type?, completed?)` | Pick, hover, or ban champion by name or numeric ID in active champion select |
+| `lol_workflow_runes_set(primaryStyleId, subStyleId, selectedPerkIds, name?, replace?)` | Configure, update, and activate a rune/perk page |
+| `lol_workflow_lobby(queueId, startMatchmaking?)` | Create game lobby for a queue (e.g. 420 Ranked Solo, 450 ARAM) and optionally start matchmaking |
 
 **`lol_status` first.** When anything else fails it tells you which half is down — a closed client looks nothing like a missing Pengu install.
 
@@ -232,6 +236,13 @@ Complex client bugs often span multiple architectural layers — for example, a 
   - Automatically falls back to reading the last 50 lines of `LeagueClient.log` from disk when the live log watcher is unstarted or empty (`includeLogTail: true`), guaranteeing diagnostic context even when recorders were not pre-armed.
   - Sanitizes all lockfile passwords, Riot authentication tokens, and session credentials using deep secret redaction.
   - Supported parameters: `since`, `until`, `limit` (default 200, max 2000), `sources` (stream filtering), `includeLogTail` (fallback to disk log tail, default `true`), and `format` (`'markdown'` for a ready-to-paste triage report or `'json'` for structured tooling).
+
+**Workflow macro automation (`lol_workflow_*`).** High-level client automation often requires multi-step orchestration across REST endpoints, active session discovery, and static data catalogs. Instead of requiring 4–8 separate round-trip tool calls with manual state inspection and timeout risks, workflow macros provide atomic, pre-conditioned execution with rollback and timeout safety:
+
+- **`lol_workflow_matchmaking_accept`**: One-call match acceptance. Verifies that a matchmaking ready check is actively in progress (`'InProgress'`) before posting acceptance. Idempotent if already accepted (`playerResponse: 'Accepted'`); safely returns non-destructive state without throwing when no check is currently in progress.
+- **`lol_workflow_champ_select`**: Pick, hover, or ban champions in active champion select. Resolves champions by human-friendly name (e.g. `"Aatrox"`, `"Yasuo"`) or numeric ID via local static game data, identifies the local player's active action cell, and executes a hover (`completed: false`) or lock-in (`completed: true`, default). Safely detects if champion select is inactive or if no eligible action is currently pending for the player.
+- **`lol_workflow_runes_set`**: Set, replace, and activate rune pages. Queries existing perk pages to mutate an existing editable page in-place (`replace: true`, default), or creates a new editable rune page if no editable page exists. Accepts primary and secondary style IDs along with an array of perk IDs, ensuring the resulting page is immediately activated.
+- **`lol_workflow_lobby`**: Create game lobbies and optionally trigger queue search. Sets up custom or matchmade lobbies by queue ID (e.g. `420` for Ranked Solo/Duo, `440` for Ranked Flex, `450` for ARAM). Idempotent if the client is already in the requested lobby, and optionally dispatches matchmaking search (`startMatchmaking: true`) within the same operation.
 
 **Filters are URI prefixes applied at ingest.** The unfiltered firehose fills the buffer quickly, so pass something like `["/lol-champ-select/", "/lol-gameflow/"]` unless you genuinely want everything.
 
@@ -350,6 +361,11 @@ src/
   forensics/
     correlate.js    # merge all 5 telemetry streams onto a unified time axis
     bundle.js       # one-stop diagnostic snapshot across all subsystems
+  workflow/
+    matchmaking.js  # ready check accept and status inspection
+    champ_select.js # champion resolution, action detection, lock-in/hover
+    runes.js        # rune page mutation, creation, and activation
+    lobby.js        # lobby creation and queue search dispatch
   tools/            # one module per tool group
 tests/              # one test file per source module
 ```

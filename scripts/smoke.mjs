@@ -181,6 +181,33 @@ await record('forensics tools (correlate & bundle)', async () => {
   }
 });
 
+await record('workflow tools (matchmaking accept)', async () => {
+  const serverCtx = buildContext({});
+  const server = createServer(serverCtx);
+  const client = new Client({ name: 'smoke-workflow', version: '1.0' });
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  await Promise.all([client.connect(clientTransport), server.server.connect(serverTransport)]);
+
+  try {
+    const result = await client.callTool({
+      name: 'lol_workflow_matchmaking_accept',
+      arguments: {}
+    });
+    if (result.isError) {
+      throw new Error(`lol_workflow_matchmaking_accept failed: ${result.content?.[0]?.text}`);
+    }
+    const data = JSON.parse(result.content[0].text);
+    return `state: ${data.state}, response: ${data.playerResponse}, message: ${data.message}`;
+  } finally {
+    await client.close();
+    serverCtx.networkTailer?.stop?.();
+    serverCtx.consoleTailer?.stop?.();
+    serverCtx.lcu?.close?.();
+    serverCtx.cdp?.close?.();
+    serverCtx.gameClient?.close?.();
+  }
+});
+
 cdp.close();
 lcu.close();
 gameClient.close();
