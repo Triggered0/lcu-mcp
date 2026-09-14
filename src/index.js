@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import pkg from '../package.json' with { type: 'json' };
 import { loadConfig } from './config.js';
 import { LcuClient } from './lcu/client.js';
 import { LcuSchemaService } from './lcu/schema.js';
@@ -61,7 +62,7 @@ export function buildContext({ env = process.env } = {}) {
 }
 
 export function createServer(ctx) {
-  const server = new McpServer({ name: 'lcu-mcp', version: '0.1.0' });
+  const server = new McpServer({ name: 'lcu-mcp', version: pkg.version });
   registerStatusTool(server, ctx);
   registerPassthroughTools(server, ctx);
   registerEndpointsTool(server, ctx);
