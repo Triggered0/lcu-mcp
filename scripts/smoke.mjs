@@ -5,6 +5,7 @@ import { loadConfig } from '../src/config.js';
 import { LcuClient } from '../src/lcu/client.js';
 import { RingBuffer } from '../src/lcu/buffer.js';
 import { LcuEventTap } from '../src/lcu/events.js';
+import { LcuStaticService } from '../src/lcu/static.js';
 import { CdpClient } from '../src/cdp/client.js';
 import { probeVersion } from '../src/cdp/discover.js';
 
@@ -28,6 +29,7 @@ const config = loadConfig({});
 const lcu = new LcuClient({});
 const buffer = new RingBuffer(config.eventBufferSize);
 const tap = new LcuEventTap({ client: lcu, buffer });
+const staticData = new LcuStaticService({ client: lcu });
 const cdp = new CdpClient({ port: config.cdpPort });
 
 await record('lockfile', async () => {
@@ -39,6 +41,13 @@ await record('REST GET /lol-gameflow/v1/gameflow-phase', async () => {
   const { status, body } = await lcu.get('/lol-gameflow/v1/gameflow-phase');
   if (status !== 200) throw new Error(`HTTP ${status}`);
   return `phase ${JSON.stringify(body)}`;
+});
+
+await record('static game data', async () => {
+  const result = await staticData.query({ kind: 'champions', query: 'yasuo' });
+  const hit = result.entries[0];
+  if (!hit) throw new Error(`no champion matched "yasuo" among ${result.total} entries`);
+  return `${result.total} champions, resolved ${hit.id} to ${hit.name}`;
 });
 
 await record('WSS event tap', async () => {
