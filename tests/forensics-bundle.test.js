@@ -485,6 +485,23 @@ test('handles comma-separated string for sources', async () => {
   assert.equal(bundle.summary.sources.game, 0);
 });
 
+test('handles single string for sources without commas', async () => {
+  const ctx = createMockContext();
+  const bundle = await createForensicsBundle(ctx, {
+    format: 'json',
+    sources: 'WAMP'
+  });
+
+  assert.equal(bundle.summary.total, 1);
+  assert.equal(bundle.timeline.length, 1);
+  assert.equal(bundle.summary.sources.wamp, 1);
+  assert.equal(bundle.summary.sources.network, 0);
+  assert.equal(bundle.summary.sources.cdp, 0);
+  assert.equal(bundle.summary.sources.logs, 0);
+  assert.equal(bundle.summary.sources.game, 0);
+  assert.equal(bundle.timeline[0].source, 'wamp');
+});
+
 test('falls back gracefully when ctx.clock.wall throws', async () => {
   const ctx = createMockContext({
     clock: {

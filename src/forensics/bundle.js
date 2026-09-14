@@ -54,8 +54,8 @@ export async function createForensicsBundle(ctx = {}, {
   format = 'markdown'
 } = {}) {
   let activeSources = sources;
-  if (typeof activeSources === 'string' && activeSources.includes(',')) {
-    activeSources = activeSources.split(',').map((s) => s.trim()).filter(Boolean);
+  if (typeof activeSources === 'string') {
+    activeSources = activeSources.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
   }
 
   // 1. System Status Collection

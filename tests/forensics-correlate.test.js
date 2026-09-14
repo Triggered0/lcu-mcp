@@ -624,4 +624,47 @@ test('correlateTimelines summary format computes accurate statistics across all 
   });
 });
 
+test('correlateTimelines filters by comma-separated sources string', () => {
+  const wampEntries = [{ wallTs: 10, kind: 'event', uri: '/wamp', data: 1 }];
+  const networkEntries = [{ wallTs: 20, method: 'GET', url: '/net', status: 200 }];
+  const logEntries = [{ wallTime: 30, target: 'client', level: 'INFO', message: 'log' }];
+
+  const filtered = correlateTimelines({
+    wampEntries,
+    networkEntries,
+    logEntries,
+    sources: 'network, logs',
+    format: 'events'
+  });
+
+  assert.equal(filtered.length, 2);
+  assert.equal(filtered[0].source, 'network');
+  assert.equal(filtered[1].source, 'logs');
+});
+
+test('formatNarrativeLine disambiguates unnormalized entries with targetId or durationMs', () => {
+  const netWithDuration = formatNarrativeLine({
+    url: '/test-endpoint',
+    durationMs: 45,
+    wallTs: 1000
+  });
+  assert.ok(netWithDuration.includes('[NETWORK:request]'));
+  assert.ok(netWithDuration.includes('(45ms)'));
+
+  const cdpWithTargetId = formatNarrativeLine({
+    targetId: 'TARGET-PAGE-1',
+    args: 'Console message',
+    wallTs: 1001
+  });
+  assert.ok(cdpWithTargetId.includes('[CDP:console]'));
+  assert.ok(cdpWithTargetId.includes('Console message'));
+
+  const cdpBareTargetId = formatNarrativeLine({
+    targetId: 'TARGET-PAGE-2',
+    wallTs: 1002
+  });
+  assert.ok(cdpBareTargetId.includes('[CDP:console]'));
+});
+
+
 

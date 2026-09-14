@@ -161,9 +161,9 @@ Nothing here needs a Riot API key or an internet connection: every call goes to 
 | `lol_game_events(afterId?)` | Retrieve in-game events (kills, objectives, aces) with incremental cursor support |
 | `lol_restart_ux(waitForReady?, timeoutSeconds?)` | Safely restart client CEF renderers with readiness polling |
 | `lol_cdp_targets()` | List all active CDP debugging targets (pages, popups, workers) |
-| `lol_cdp_screenshot(targetId?, format?, quality?, savePath?)` | Capture client screenshot via CDP (returns MCP image + disk save) |
 | `lol_schema(path?, method?, model?, refresh?)` | Query internal LCU OpenAPI/Swagger v2 schemas and models |
-| `lol_forensics_correlate(since?, until?, limit?, uriPrefix?, levels?, format?)` | Correlate WAMP recorder and CDP console timelines on a shared time axis |
+| `lol_forensics_correlate(since?, until?, limit?, sources?, uriPrefix?, levels?, networkFailedOnly?, logLevel?, format?)` | Correlate telemetry across all 5 streams (WAMP, CDP console, CDP network, disk logs, live game) on a shared time axis |
+| `lol_forensics_bundle(since?, until?, limit?, sources?, includeLogTail?, format?)` | Generate an end-to-end diagnostic snapshot combining system status, active timeline streams, and disk log fallbacks |
 
 **`lol_status` first.** When anything else fails it tells you which half is down — a closed client looks nothing like a missing Pengu install.
 
@@ -203,6 +203,34 @@ complete, token-efficient projection of match clock, team comparisons, scores, i
 and vital stats (or full raw JSON via `format: 'raw'`). `lol_game_events` tracks combat
 and objective kills incrementally using `afterId`. If no match is currently running,
 tools report a clear indication rather than connection failures.
+
+**Unified multi-stream forensics & diagnostic snapshot (`lol_forensics_*`).**
+Complex client bugs often span multiple architectural layers — for example, a champion select lock-in failure might involve an LCU REST 400 error, a frontend exception in CEF, an unfulfilled WAMP gameflow state change, and a diagnostic log entry in `LeagueClient.log`.
+
+- **`lol_forensics_correlate`** merges events chronologically onto a unified time axis from all 5 telemetry streams:
+  - `wamp`: LCU WebSocket events emitted by backend microservices.
+  - `cdp`: Frontend console logs, warnings, errors, and unhandled page exceptions.
+  - `network`: CEF HTTP requests and responses, status codes, round-trip durations, and network dropouts.
+  - `logs`: Live disk log lines streamed from `LeagueClient.log` or `LeagueClientUx.log`.
+  - `game`: In-match combat, objective, and gameflow events from the live game engine.
+
+  Supported parameters:
+  - `sources`: Restrict correlation to specific streams (`wamp`, `cdp`, `network`, `logs`, `game`).
+  - `since` & `until`: Timestamp filtering bounds in epoch ms or relative clock ts.
+  - `limit`: Maximum total events returned across streams (default 100, max 1000).
+  - `uriPrefix`: Filter WAMP events by URI prefix (e.g. `/lol-champ-select/`).
+  - `levels`: Filter CDP console entries by level (`['error', 'warning', 'info', 'log', 'debug']`).
+  - `networkFailedOnly`: Filter CDP network requests to only failed or aborted connections.
+  - `logLevel`: Filter live disk log entries by log level (e.g. `ERROR`, `WARN`, `INFO`).
+  - `format`: Output format: `'narrative'` (default chronological human/LLM-readable log), `'events'` (interleaved JSON array), or `'summary'` (aggregated event and error metrics).
+
+- **`lol_forensics_bundle`** is a one-stop diagnostic snapshot tool for triaging client issues, generating bug reports, or feeding a comprehensive post-mortem to an LLM:
+  - Inspects real-time system status across LCU REST, CEF remote debugging, live game engine, and all 4 background stream watchers.
+  - Compiles telemetry metrics and error tallies.
+  - Generates the chronological multi-stream timeline narrative.
+  - Automatically falls back to reading the last 50 lines of `LeagueClient.log` from disk when the live log watcher is unstarted or empty (`includeLogTail: true`), guaranteeing diagnostic context even when recorders were not pre-armed.
+  - Sanitizes all lockfile passwords, Riot authentication tokens, and session credentials using deep secret redaction.
+  - Supported parameters: `since`, `until`, `limit` (default 200, max 2000), `sources` (stream filtering), `includeLogTail` (fallback to disk log tail, default `true`), and `format` (`'markdown'` for a ready-to-paste triage report or `'json'` for structured tooling).
 
 **Filters are URI prefixes applied at ingest.** The unfiltered firehose fills the buffer quickly, so pass something like `["/lol-champ-select/", "/lol-gameflow/"]` unless you genuinely want everything.
 
@@ -319,7 +347,8 @@ src/
     client.js       # HTTPS client to in-match engine on port 2999
     summary.js      # token-efficient projection of allgamedata
   forensics/
-    correlate.js    # merge WAMP and console timelines on one time axis
+    correlate.js    # merge all 5 telemetry streams onto a unified time axis
+    bundle.js       # one-stop diagnostic snapshot across all subsystems
   tools/            # one module per tool group
 tests/              # one test file per source module
 ```

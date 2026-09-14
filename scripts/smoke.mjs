@@ -12,6 +12,9 @@ import { NetworkTailer } from '../src/cdp/network.js';
 import { LogSessionFinder } from '../src/logs/sessions.js';
 import { LogReader } from '../src/logs/reader.js';
 import { LiveGameClient } from '../src/game/client.js';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { buildContext, createServer } from '../src/index.js';
 
 const results = [];
 // A stage that cannot prove anything is neither a pass nor a failure: throwing
@@ -139,6 +142,41 @@ await record('live game data', async () => {
   }
   const stats = await gameClient.getGameStats();
   return `${stats.gameMode} on ${stats.mapName} at ${stats.gameTime.toFixed(1)}s`;
+});
+
+await record('forensics tools (correlate & bundle)', async () => {
+  const serverCtx = buildContext({});
+  const server = createServer(serverCtx);
+  const client = new Client({ name: 'smoke-forensics', version: '1.0' });
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  await Promise.all([client.connect(clientTransport), server.server.connect(serverTransport)]);
+
+  try {
+    const correlateResult = await client.callTool({
+      name: 'lol_forensics_correlate',
+      arguments: { format: 'summary' }
+    });
+    if (correlateResult.isError) {
+      throw new Error(`lol_forensics_correlate failed: ${correlateResult.content?.[0]?.text}`);
+    }
+    const correlateSummary = JSON.parse(correlateResult.content[0].text);
+
+    const bundleResult = await client.callTool({
+      name: 'lol_forensics_bundle',
+      arguments: { format: 'json' }
+    });
+    if (bundleResult.isError) {
+      throw new Error(`lol_forensics_bundle failed: ${bundleResult.content?.[0]?.text}`);
+    }
+    const bundleData = JSON.parse(bundleResult.content[0].text);
+
+    return `correlate: ${correlateSummary.total} events, bundle: LCU ${bundleData.status?.lcu?.connected ? 'connected' : 'disconnected'}`;
+  } finally {
+    await client.close();
+    serverCtx.lcu?.close?.();
+    serverCtx.cdp?.close?.();
+    serverCtx.gameClient?.close?.();
+  }
 });
 
 cdp.close();

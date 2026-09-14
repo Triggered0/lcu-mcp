@@ -163,7 +163,7 @@ export function formatNarrativeLine(entry) {
   if (!entry) return '';
   let normalized = entry;
   if (!entry.summary) {
-    if (entry.source === 'network' || entry.method || entry.requestId) {
+    if (entry.source === 'network' || entry.method || entry.requestId || entry.durationMs) {
       normalized = normalizeNetworkEntry(entry);
     } else if (entry.source === 'logs' || entry.target || (entry.level && entry.message)) {
       normalized = normalizeLogEntry(entry);
@@ -171,7 +171,7 @@ export function formatNarrativeLine(entry) {
       normalized = normalizeGameEntry(entry);
     } else if (entry.source === 'wamp' || entry.uri || entry.endpoint) {
       normalized = normalizeWampEntry(entry);
-    } else if (entry.source === 'cdp' || entry.args || entry.targetId) {
+    } else if (entry.source === 'cdp' || entry.targetId || entry.args) {
       normalized = normalizeCdpEntry(entry);
     }
   }
@@ -212,6 +212,8 @@ export function correlateTimelines({
       allowedSources = new Set([...sources].map((s) => String(s).toLowerCase()));
     } else if (Array.isArray(sources)) {
       allowedSources = new Set(sources.map((s) => String(s).toLowerCase()));
+    } else if (typeof sources === 'string') {
+      allowedSources = new Set(sources.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean));
     }
     if (allowedSources) {
       combined = combined.filter((e) => allowedSources.has(e.source));
