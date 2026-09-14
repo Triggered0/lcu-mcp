@@ -47,6 +47,14 @@ export function fakeContext(overrides = {}) {
       tail: () => ({ entries: [], cursor: 0, dropped: 0, remaining: 0, running: false, attached: false, targetId: null, startedAt: null }),
       stop: () => ({ stopped: false, entries: 0 })
     },
+    networkTailer: {
+      start: async () => ({ startedAt: 0, targetId: null, alreadyRunning: false }),
+      tail: () => ({ entries: [], cursor: 0, dropped: 0, remaining: 0, inflight: [] }),
+      summary: () => ({ total: 0, groups: [] }),
+      body: async () => ({ requestId: '1', url: 'u', status: 200, base64Encoded: false, body: '' }),
+      stop: () => ({ stopped: false, entries: 0 }),
+      statusSnapshot: () => ({ running: false, startedAt: null, targetId: null, entries: 0, inflight: 0, droppedTotal: 0, lastError: null })
+    },
     schema: {
       fetchSchema: async () => ({}),
       query: async () => ({ pathsCount: 0, definitionsCount: 0, paths: [] }),

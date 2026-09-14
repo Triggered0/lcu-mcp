@@ -11,7 +11,8 @@ export const DEFAULTS = {
   wampRecordPayloadCap: 512,
   wampRecordFullPayloadUris: ['/lol-gameflow/v1/gameflow-phase'],
   wampRecordFile: null,
-  cdpConsoleBufferSize: 5000
+  cdpConsoleBufferSize: 5000,
+  cdpNetworkBufferSize: 5000
 };
 
 export function validateConfig(raw) {
@@ -30,7 +31,13 @@ export function validateConfig(raw) {
   if (!Number.isInteger(config.eventBufferSize) || config.eventBufferSize < 1) {
     throw new Error(`Config "eventBufferSize" must be a positive integer, got ${JSON.stringify(config.eventBufferSize)}`);
   }
-  for (const key of ['wampRecordBufferSize', 'wampRecordMaxBytes', 'wampRecordPayloadCap', 'cdpConsoleBufferSize']) {
+  for (const key of [
+    'wampRecordBufferSize',
+    'wampRecordMaxBytes',
+    'wampRecordPayloadCap',
+    'cdpConsoleBufferSize',
+    'cdpNetworkBufferSize'
+  ]) {
     if (!Number.isInteger(config[key]) || config[key] < 1) {
       throw new Error(`Config "${key}" must be a positive integer, got ${JSON.stringify(config[key])}`);
     }

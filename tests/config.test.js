@@ -75,6 +75,7 @@ test('the recorder and console defaults are applied', () => {
   assert.deepEqual(config.wampRecordFullPayloadUris, ['/lol-gameflow/v1/gameflow-phase']);
   assert.equal(config.wampRecordFile, null);
   assert.equal(config.cdpConsoleBufferSize, 5000);
+  assert.equal(config.cdpNetworkBufferSize, 5000);
 });
 
 test('recorder sizes must be positive integers', () => {
@@ -82,6 +83,7 @@ test('recorder sizes must be positive integers', () => {
   assert.throws(() => validateConfig({ wampRecordMaxBytes: -1 }), /wampRecordMaxBytes/);
   assert.throws(() => validateConfig({ wampRecordPayloadCap: 1.5 }), /wampRecordPayloadCap/);
   assert.throws(() => validateConfig({ cdpConsoleBufferSize: 'big' }), /cdpConsoleBufferSize/);
+  assert.throws(() => validateConfig({ cdpNetworkBufferSize: 'big' }), /cdpNetworkBufferSize/);
 });
 
 test('wampRecordFullPayloadUris must be an array of paths', () => {

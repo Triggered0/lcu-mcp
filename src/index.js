@@ -12,6 +12,7 @@ import { CdpClient } from './cdp/client.js';
 import { WampRecorder } from './lcu/recorder.js';
 import { NdjsonSink } from './lcu/ndjson.js';
 import { ConsoleTailer } from './cdp/console.js';
+import { NetworkTailer } from './cdp/network.js';
 import { registerStatusTool } from './tools/status.js';
 import { registerPassthroughTools } from './tools/passthrough.js';
 import { registerEndpointsTool } from './tools/endpoints.js';
@@ -21,6 +22,7 @@ import { registerEventTools } from './tools/events.js';
 import { registerDomTools } from './tools/dom.js';
 import { registerRecorderTools } from './tools/recorder.js';
 import { registerConsoleTools } from './tools/console.js';
+import { registerNetworkTools } from './tools/network.js';
 import { registerUxTools } from './tools/ux.js';
 import { registerCdpTools } from './tools/cdp.js';
 import { registerForensicsTools } from './tools/forensics.js';
@@ -50,6 +52,16 @@ export function buildContext({ env = process.env } = {}) {
     config,
     secrets: () => (lcu.currentPassword() ? [lcu.currentPassword()] : [])
   });
+  // Its own CDP socket, for the same reason the console tailer has one: a
+  // re-attach supervisor must not be able to destabilise the shared client.
+  // It cannot share the console's socket either, because stopping the console
+  // closes that socket and would silently kill this tailer too.
+  const networkCdp = new CdpClient({ portResolver });
+  const networkTailer = new NetworkTailer({
+    cdp: networkCdp,
+    config,
+    secrets: () => (lcu.currentPassword() ? [lcu.currentPassword()] : [])
+  });
   return {
     config,
     lcu,
@@ -60,6 +72,7 @@ export function buildContext({ env = process.env } = {}) {
     cdp,
     recorder,
     consoleTailer,
+    networkTailer,
     // The live password, for guard() to strip out of error text. No tool returns it.
     secrets: () => (lcu.currentPassword() ? [lcu.currentPassword()] : [])
   };
@@ -76,6 +89,7 @@ export function createServer(ctx) {
   registerDomTools(server, ctx);
   registerRecorderTools(server, ctx);
   registerConsoleTools(server, ctx);
+  registerNetworkTools(server, ctx);
   registerUxTools(server, ctx);
   registerCdpTools(server, ctx);
   registerForensicsTools(server, ctx);

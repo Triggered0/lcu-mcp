@@ -25,6 +25,7 @@ export function registerStatusTool(server, ctx) {
           events: ctx.tap.statusSnapshot(),
           recorder: ctx.recorder.statusSnapshot(),
           console: ctx.consoleTailer.statusSnapshot(),
+          network: ctx.networkTailer.statusSnapshot(),
           config: {
             configPath: ctx.config.configPath,
             cdpPort: ctx.config.cdpPort,
