@@ -114,6 +114,7 @@ Or from a local repository clone:
 | `lol_get(path)` | GET any LCU path |
 | `lol_request(method, path, body?)` | Any verb, subject to the write allowlist |
 | `lol_endpoints(filter?)` | List the curated endpoint table |
+| `lol_static(kind, ids?, query?, fields?, limit?, offset?, refresh?)` | Resolve champion/item/perk/spell/map/queue ids to names from the client's local game data |
 | `lol_events_start(filters?)` | Open the WebSocket tap and begin buffering |
 | `lol_events_poll(since?, limit?, filter?)` | Drain the ring buffer |
 | `lol_events_stop()` | Close the tap |
