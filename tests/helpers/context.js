@@ -3,7 +3,7 @@ import { RingBuffer } from '../../src/lcu/buffer.js';
 export function fakeContext(overrides = {}) {
   const buffer = new RingBuffer(10);
   return {
-    config: { allowEval: true, cdpPort: 8888, eventBufferSize: 10, writeAllowlist: [], configPath: 'config/allowlist.json' },
+    config: { allowEval: true, cdpPort: 8888, eventBufferSize: 10, writeAllowlist: [], configPath: 'config/allowlist.json', liveGamePort: 2999 },
     buffer,
     lcu: {
       statusSnapshot: () => ({ connected: true, port: 29669, lockfilePath: 'L', lastError: null }),
@@ -77,6 +77,15 @@ export function fakeContext(overrides = {}) {
       poll: () => ({ entries: [], cursor: 0, dropped: 0, remaining: 0, running: false, target: null, filePath: null }),
       stop: async () => ({ stopped: false, entriesDiscarded: 0 }),
       statusSnapshot: () => ({ running: false, target: null, filePath: null, offset: 0, entries: 0, droppedTotal: 0 })
+    },
+    gameClient: {
+      port: 2999,
+      isGameRunning: async () => false,
+      getGameStats: async () => ({ gameMode: 'CLASSIC', gameTime: 0 }),
+      getAllGameData: async () => ({ gameData: {}, activePlayer: {}, allPlayers: [], events: { Events: [] } }),
+      getActivePlayer: async () => ({ summonerName: 'Player', championName: 'Ahri' }),
+      getPlayerList: async () => [],
+      getEvents: async () => ({ Events: [] })
     },
     secrets: () => ['S3cr3t-Pa55'],
     ...overrides

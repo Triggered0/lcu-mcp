@@ -27,6 +27,7 @@ export function registerStatusTool(server, ctx) {
           console: ctx.consoleTailer.statusSnapshot(),
           network: ctx.networkTailer.statusSnapshot(),
           logs: ctx.logWatcher ? ctx.logWatcher.statusSnapshot() : null,
+          game: ctx.gameClient ? await ctx.gameClient.isGameRunning().catch(() => false) : false,
           config: {
             configPath: ctx.config.configPath,
             cdpPort: ctx.config.cdpPort,

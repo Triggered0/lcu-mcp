@@ -14,7 +14,8 @@ export const DEFAULTS = {
   cdpConsoleBufferSize: 5000,
   cdpNetworkBufferSize: 5000,
   logWatchBufferSize: 5000,
-  logsDir: null
+  logsDir: null,
+  liveGamePort: 2999
 };
 
 export function validateConfig(raw) {
@@ -39,7 +40,8 @@ export function validateConfig(raw) {
     'wampRecordPayloadCap',
     'cdpConsoleBufferSize',
     'cdpNetworkBufferSize',
-    'logWatchBufferSize'
+    'logWatchBufferSize',
+    'liveGamePort'
   ]) {
     if (!Number.isInteger(config[key]) || config[key] < 1) {
       throw new Error(`Config "${key}" must be a positive integer, got ${JSON.stringify(config[key])}`);

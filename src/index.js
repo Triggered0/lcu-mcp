@@ -27,6 +27,8 @@ import { registerUxTools } from './tools/ux.js';
 import { registerCdpTools } from './tools/cdp.js';
 import { registerForensicsTools } from './tools/forensics.js';
 import { registerLogTools } from './tools/logs.js';
+import { registerGameTools } from './tools/game.js';
+import { LiveGameClient } from './game/client.js';
 import { LogSessionFinder } from './logs/sessions.js';
 import { LogReader } from './logs/reader.js';
 import { LogWatchTailer } from './logs/watcher.js';
@@ -79,6 +81,7 @@ export function buildContext({ env = process.env } = {}) {
     config,
     secrets: () => (lcu.currentPassword() ? [lcu.currentPassword()] : [])
   });
+  const gameClient = new LiveGameClient({ port: config.liveGamePort });
   return {
     config,
     lcu,
@@ -93,6 +96,7 @@ export function buildContext({ env = process.env } = {}) {
     logFinder,
     logReader,
     logWatcher,
+    gameClient,
     // The live password, for guard() to strip out of error text. No tool returns it.
     secrets: () => (lcu.currentPassword() ? [lcu.currentPassword()] : [])
   };
@@ -114,6 +118,7 @@ export function createServer(ctx) {
   registerCdpTools(server, ctx);
   registerForensicsTools(server, ctx);
   registerLogTools(server, ctx);
+  registerGameTools(server, ctx);
   return server;
 }
 

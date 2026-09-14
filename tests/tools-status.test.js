@@ -52,6 +52,10 @@ test('the server registers exactly the tools wired so far', async () => {
     'lol_events_start',
     'lol_events_stop',
     'lol_forensics_correlate',
+    'lol_game_all',
+    'lol_game_events',
+    'lol_game_player',
+    'lol_game_stats',
     'lol_get',
     'lol_logs_sessions',
     'lol_logs_tail',
@@ -79,6 +83,7 @@ test('lol_status reports both subsystems and the config', async () => {
   assert.equal(status.cdp.port, 8888);
   assert.equal(status.events.running, false);
   assert.deepEqual(status.logs, { running: false, target: null, filePath: null, offset: 0, entries: 0, droppedTotal: 0 });
+  assert.equal(status.game, false);
   assert.equal(status.config.allowEval, true);
   assert.equal(status.config.cdpPort, 8888);
   await client.close();
@@ -121,6 +126,8 @@ test('buildContext constructs logFinder, logReader, and logWatcher', () => {
   assert.ok(ctx.logReader);
   assert.ok(ctx.logWatcher);
   assert.equal(ctx.logWatcher.statusSnapshot().running, false);
+  assert.ok(ctx.gameClient);
+  assert.equal(ctx.gameClient.port, 2999);
 });
 
 test('main is exported as a function for CLI bin execution', async () => {

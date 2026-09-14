@@ -17,6 +17,7 @@ test('missing config file falls back to defaults', () => {
   assert.equal(config.allowEval, DEFAULTS.allowEval);
   assert.equal(config.cdpPort, 'auto');
   assert.equal(config.eventBufferSize, 1000);
+  assert.equal(config.liveGamePort, 2999);
   assert.deepEqual(config.writeAllowlist, []);
   assert.match(config.configPath, /does-not-exist\.json$/);
 });
@@ -78,6 +79,15 @@ test('the recorder and console defaults are applied', () => {
   assert.equal(config.cdpNetworkBufferSize, 5000);
   assert.equal(config.logWatchBufferSize, 5000);
   assert.equal(config.logsDir, null);
+  assert.equal(config.liveGamePort, 2999);
+});
+
+test('liveGamePort must be a positive integer', () => {
+  assert.throws(() => validateConfig({ liveGamePort: 0 }), /liveGamePort/);
+  assert.throws(() => validateConfig({ liveGamePort: -1 }), /liveGamePort/);
+  assert.throws(() => validateConfig({ liveGamePort: '2999' }), /liveGamePort/);
+  assert.throws(() => validateConfig({ liveGamePort: 2999.5 }), /liveGamePort/);
+  assert.equal(validateConfig({ liveGamePort: 3000 }).liveGamePort, 3000);
 });
 
 test('recorder sizes must be positive integers', () => {

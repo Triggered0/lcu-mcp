@@ -39,7 +39,11 @@ const EXPECTED = {
   lol_logs_watch_start: [false, false, true, true],
   lol_logs_watch_poll: [true, false, true, false],
   lol_logs_watch_stop: [false, true, true, true],
-  lol_logs_sessions: [true, false, true, true]
+  lol_logs_sessions: [true, false, true, true],
+  lol_game_all: [true, false, true, true],
+  lol_game_stats: [true, false, true, true],
+  lol_game_player: [true, false, true, true],
+  lol_game_events: [true, false, true, true]
 };
 
 async function listTools() {
