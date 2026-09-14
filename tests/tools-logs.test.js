@@ -191,6 +191,12 @@ test('lol_logs_watch_poll forwards its arguments and applies defaults', async ()
   assert.equal(parsed.cursor, 5);
   assert.equal(parsed.entries.length, 1);
 
+  const badLevel = await client.callTool({
+    name: 'lol_logs_watch_poll',
+    arguments: { level: 'VERBOSE' }
+  });
+  assert.equal(badLevel.isError, true);
+
   await client.close();
 });
 

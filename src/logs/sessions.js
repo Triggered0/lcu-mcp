@@ -23,6 +23,9 @@ export class LogSessionFinder {
   async resolveActiveLogFile(target = 'client', sessionName = null) {
     if (sessionName) {
       const safeName = basename(sessionName);
+      if (safeName === '.' || safeName === '..') {
+        throw new Error(`Invalid sessionName "${sessionName}"`);
+      }
       if (target === 'game') {
         const sessionPath = join(this.#logsDir, 'GameLogs', safeName);
         const files = await readdir(sessionPath).catch(() => []);
@@ -65,7 +68,7 @@ export class LogSessionFinder {
 
     return entries
       .filter(Boolean)
-      .sort((a, b) => b.mtime - a.mtime)
+      .sort((a, b) => b.mtime - a.mtime || b.filename.localeCompare(a.filename))
       .slice(0, limit);
   }
 
@@ -96,7 +99,7 @@ export class LogSessionFinder {
 
     return entries
       .filter(Boolean)
-      .sort((a, b) => b.mtime - a.mtime)
+      .sort((a, b) => b.mtime - a.mtime || b.filename.localeCompare(a.filename))
       .slice(0, limit);
   }
 }

@@ -19,6 +19,7 @@ export class LogWatchTailer {
   #baseWallTime = 0;
   #drainPromise = null;
   #needsAnotherDrain = false;
+  #remainder = '';
 
   constructor({ finder, config = {}, secrets = () => [], clock = createClock() } = {}) {
     this.#finder = finder;
@@ -52,6 +53,7 @@ export class LogWatchTailer {
     this.#filePath = await this.#finder.resolveActiveLogFile(target);
     const s = await stat(this.#filePath);
     this.#offset = s.size;
+    this.#remainder = '';
     this.#buffer.clear();
     this.#running = true;
 
@@ -133,9 +135,13 @@ export class LogWatchTailer {
       }
       this.#offset = s.size;
 
+      const rawChunk = chunk.toString('utf8');
+      const fullText = this.#remainder + rawChunk;
+      const splitLines = fullText.split(/\r?\n/);
+      this.#remainder = splitLines.pop() ?? '';
+
       const secretsList = typeof this.#secrets === 'function' ? this.#secrets() : (Array.isArray(this.#secrets) ? this.#secrets : []);
-      const lines = chunk.toString('utf8').split(/\r?\n/).filter(Boolean);
-      for (const line of lines) {
+      for (const line of splitLines) {
         const cleanLine = line.replace(/\r$/, '');
         if (!cleanLine) continue;
         const parsed = parseLogLine(cleanLine, this.#baseWallTime, secretsList);
@@ -183,6 +189,14 @@ export class LogWatchTailer {
       this.#interval = null;
     }
     this.#running = false;
+    if (this.#drainPromise) {
+      try {
+        await this.#drainPromise;
+      } catch {
+        // Ignore errors from in-flight drain during stop
+      }
+    }
+    this.#remainder = '';
     const held = this.#buffer.length;
     this.#buffer.clear();
     return { stopped: true, entriesDiscarded: held };

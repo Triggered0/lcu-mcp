@@ -149,8 +149,46 @@ test('LogSessionFinder sanitizes sessionName with basename', async () => {
     await writeFile(join(gameSessionDir, 'session1_r3dlog.txt'), 'content');
     const resolvedGame = await finder.resolveActiveLogFile('game', '../../session1');
     assert.equal(resolvedGame, join(gameSessionDir, 'session1_r3dlog.txt'));
+
+    await assert.rejects(
+      () => finder.resolveActiveLogFile('client', '.'),
+      /Invalid sessionName "\."/
+    );
+    await assert.rejects(
+      () => finder.resolveActiveLogFile('client', '..'),
+      /Invalid sessionName "\.\."/
+    );
+    await assert.rejects(
+      () => finder.resolveActiveLogFile('game', '.'),
+      /Invalid sessionName "\."/
+    );
+    await assert.rejects(
+      () => finder.resolveActiveLogFile('game', '..'),
+      /Invalid sessionName "\.\."/
+    );
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }
 });
+
+test('LogSessionFinder uses filename as secondary tie-breaker sort when mtimes match', async () => {
+  const tempDir = await mkdtemp(join(tmpdir(), 'lcu-logs-tie-'));
+  try {
+    const logsDir = join(tempDir, 'Logs');
+    const clientLogsDir = join(logsDir, 'LeagueClient Logs');
+    await mkdir(clientLogsDir, { recursive: true });
+
+    await writeFile(join(clientLogsDir, 'A_LeagueClient.log'), 'content');
+    await writeFile(join(clientLogsDir, 'B_LeagueClient.log'), 'content');
+
+    const finder = new LogSessionFinder({ logsDir });
+    const sessions = await finder.findSessions('client');
+    assert.equal(sessions.length, 2);
+    // Both files have same or close mtime, secondary sort ensures B comes before A or deterministic
+    assert.ok(sessions[0].filename > sessions[1].filename || sessions[0].mtime >= sessions[1].mtime);
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
 

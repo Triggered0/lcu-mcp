@@ -251,3 +251,69 @@ test('LogWatchTailer stop() cleans up and reports discarded entries', async () =
     await rm(tempDir, { recursive: true, force: true });
   }
 });
+
+test('LogWatchTailer buffers partial line fragments across drain cycles', async () => {
+  const tempDir = await mkdtemp(join(tmpdir(), 'lcu-watcher-frag-'));
+  try {
+    const logsDir = join(tempDir, 'Logs', 'LeagueClient Logs');
+    await mkdir(logsDir, { recursive: true });
+    const logFile = join(logsDir, '2026-09-14T12-00-00_123_LeagueClient.log');
+    await writeFile(logFile, '000000.000| ALWAYS| Initial line\n');
+
+    const finder = new LogSessionFinder({ logsDir: join(tempDir, 'Logs') });
+    const watcher = new LogWatchTailer({ finder });
+
+    await watcher.start({ target: 'client' });
+
+    // Append partial fragment without newline
+    await appendFile(logFile, '000001.000|   OKAY| Incomplete message ');
+    await watcher.drain();
+
+    // No completed line should have been pushed
+    const page1 = watcher.poll();
+    assert.equal(page1.entries.length, 0);
+
+    // Append remainder of the line with newline and another line
+    await appendFile(logFile, 'now completed\n000002.000|   WARN| Second complete line\n');
+    await watcher.drain();
+
+    const page2 = watcher.poll();
+    assert.equal(page2.entries.length, 2);
+    assert.equal(page2.entries[0].message, 'Incomplete message now completed');
+    assert.equal(page2.entries[0].level, 'OKAY');
+    assert.equal(page2.entries[1].message, 'Second complete line');
+    assert.equal(page2.entries[1].level, 'WARN');
+
+    await watcher.stop();
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('LogWatchTailer stop() cleanly awaits in-flight drain without leaving zombie entries', async () => {
+  const tempDir = await mkdtemp(join(tmpdir(), 'lcu-watcher-race-'));
+  try {
+    const logsDir = join(tempDir, 'Logs', 'LeagueClient Logs');
+    await mkdir(logsDir, { recursive: true });
+    const logFile = join(logsDir, '2026-09-14T12-00-00_123_LeagueClient.log');
+    await writeFile(logFile, '000000.000| ALWAYS| Initial line\n');
+
+    const finder = new LogSessionFinder({ logsDir: join(tempDir, 'Logs') });
+    const watcher = new LogWatchTailer({ finder });
+
+    await watcher.start({ target: 'client' });
+
+    // Concurrently append, drain, and stop
+    await appendFile(logFile, '000001.000|   OKAY| Fast write\n');
+    const drainPromise = watcher.drain();
+    const stopPromise = watcher.stop();
+
+    await Promise.all([drainPromise, stopPromise]);
+
+    assert.equal(watcher.statusSnapshot().running, false);
+    assert.equal(watcher.statusSnapshot().entries, 0);
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+

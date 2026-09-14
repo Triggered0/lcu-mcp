@@ -73,7 +73,10 @@ export function registerLogTools(server, ctx) {
       inputSchema: {
         cursor: z.number().int().min(0).optional().describe('Sequence cursor from a previous poll'),
         limit: z.number().int().min(1).max(2000).optional().describe('Maximum entries to return (default 100)'),
-        level: z.string().optional().describe('Filter by log level (e.g. "ERROR", "WARN", "ALL")'),
+        level: z
+          .enum(['ALWAYS', 'OKAY', 'INFO', 'WARN', 'ERROR', 'ALL'])
+          .optional()
+          .describe('Filter by log level or ALL (e.g. "ERROR", "WARN", "ALL")'),
         search: z.string().optional().describe('Case-insensitive substring filter applied to log entries')
       },
       annotations: {
