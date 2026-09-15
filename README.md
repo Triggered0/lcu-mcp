@@ -237,12 +237,14 @@ Complex client bugs often span multiple architectural layers — for example, a 
   - Sanitizes all lockfile passwords, Riot authentication tokens, and session credentials using deep secret redaction.
   - Supported parameters: `since`, `until`, `limit` (default 200, max 2000), `sources` (stream filtering), `includeLogTail` (fallback to disk log tail, default `true`), and `format` (`'markdown'` for a ready-to-paste triage report or `'json'` for structured tooling).
 
-**Workflow macro automation (`lol_workflow_*`).** High-level client automation often requires multi-step orchestration across REST endpoints, active session discovery, and static data catalogs. Instead of requiring 4–8 separate round-trip tool calls with manual state inspection and timeout risks, workflow macros provide atomic, pre-conditioned execution with rollback and timeout safety:
+**Workflow macro automation (`lol_workflow_*`).** High-level client automation needs multi-step orchestration across REST endpoints, active session discovery, and static data catalogs. Instead of 4–8 separate round-trip tool calls with manual state inspection, each macro inspects its preconditions and then issues the one mutation that follows from them. There is no rollback: a macro that fails part-way leaves the client wherever it got to, and the error says which call failed.
 
-- **`lol_workflow_matchmaking_accept`**: One-call match acceptance. Verifies that a matchmaking ready check is actively in progress (`'InProgress'`) before posting acceptance. Idempotent if already accepted (`playerResponse: 'Accepted'`); safely returns non-destructive state without throwing when no check is currently in progress.
-- **`lol_workflow_champ_select`**: Pick, hover, or ban champions in active champion select. Resolves champions by human-friendly name (e.g. `"Aatrox"`, `"Yasuo"`) or numeric ID via local static game data, identifies the local player's active action cell, and executes a hover (`completed: false`) or lock-in (`completed: true`, default). Safely detects if champion select is inactive or if no eligible action is currently pending for the player.
-- **`lol_workflow_runes_set`**: Set, replace, and activate rune pages. Queries existing perk pages to mutate an existing editable page in-place (`replace: true`, default), or creates a new editable rune page if no editable page exists. Accepts primary and secondary style IDs along with an array of perk IDs, ensuring the resulting page is immediately activated.
-- **`lol_workflow_lobby`**: Create game lobbies and optionally trigger queue search. Sets up custom or matchmade lobbies by queue ID (e.g. `420` for Ranked Solo/Duo, `440` for Ranked Flex, `450` for ARAM). Idempotent if the client is already in the requested lobby, and optionally dispatches matchmaking search (`startMatchmaking: true`) within the same operation.
+Macros mutate the client, so **every write they send goes through the [write allowlist](#configuration)**, exactly like `lol_request`. The shipped `config/allowlist.json` permits all of them; delete a line to disable the corresponding macro, and the refusal will name the line that would re-enable it.
+
+- **`lol_workflow_matchmaking_accept`**: One-call match acceptance. Verifies that a matchmaking ready check is actively in progress (`'InProgress'`) before posting acceptance. Idempotent if already accepted (`playerResponse: 'Accepted'`); returns state without throwing when no check is in progress. A closed client is reported as an error, not as "no ready check".
+- **`lol_workflow_champ_select`**: Pick, hover, or ban champions in active champion select. Resolves champions by human-friendly name (e.g. `"Aatrox"`, `"Yasuo"`) or numeric ID via local static game data, identifies the local player's active action cell, and executes a hover (`completed: false`) or lock-in (`completed: true`, default). An exact name wins; a partial name that matches more than one champion is refused with the candidates listed, because a lock-in cannot be undone. Safely detects if champion select is inactive or if no eligible action is currently pending for the player.
+- **`lol_workflow_runes_set`**: Set, replace, and activate rune pages. With `replace: true` (default) it reuses an editable page **whose name matches `name`** and overwrites it; otherwise it creates a new editable page. It never overwrites a page the user named something else. Accepts primary and secondary style IDs along with an array of perk IDs, ensuring the resulting page is immediately activated.
+- **`lol_workflow_lobby`**: Create game lobbies and optionally trigger queue search. Sets up custom or matchmade lobbies by queue ID (e.g. `420` for Ranked Solo/Duo, `440` for Ranked Flex, `450` for ARAM). A no-op if the client is already in the requested queue; if it is in a lobby on a *different* queue, that lobby is replaced. Optionally dispatches matchmaking search (`startMatchmaking: true`) within the same operation.
 
 **Filters are URI prefixes applied at ingest.** The unfiltered firehose fills the buffer quickly, so pass something like `["/lol-champ-select/", "/lol-gameflow/"]` unless you genuinely want everything.
 
@@ -262,12 +264,14 @@ Complex client bugs often span multiple architectural layers — for example, a 
 }
 ```
 
+The shipped file also carries the remaining lines the `lol_workflow_*` macros need — `POST /lol-lobby/v2/lobby`, `POST /lol-lobby/v2/lobby/matchmaking/search`, `POST /lol-perks/v1/pages` and `PUT /lol-perks/v1/pages/*`.
+
 | Key | Default | Meaning |
 |---|---|---|
 | `allowEval` | `true` | Whether `lol_eval` may run JavaScript in the page |
 | `cdpPort` | `8888` | Pengu Loader's remote debugging port |
 | `eventBufferSize` | `1000` | Ring buffer capacity; oldest entries are evicted first |
-| `writeAllowlist` | `[]` | Which mutating requests `lol_request` may send |
+| `writeAllowlist` | `[]` | Which mutating requests `lol_request` and the `lol_workflow_*` macros may send |
 | `wampRecordBufferSize` | `20000` | Recorder timeline entry count |
 | `wampRecordMaxBytes` | `67108864` | Recorder byte budget; evicts on whichever fills first |
 | `wampRecordPayloadCap` | `512` | Per-payload truncation for the recorder |

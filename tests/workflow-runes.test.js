@@ -81,7 +81,7 @@ test('setRunePage throws when selectedPerkIds is missing or empty', async () => 
 test('setRunePage updates existing editable page when replace is true', async () => {
   const existingPages = [
     { id: 100, name: 'Default', isEditable: false, current: false },
-    { id: 101, name: 'Custom Page', isEditable: true, current: true }
+    { id: 101, name: 'Conqueror Yasuo', isEditable: true, current: true }
   ];
   const lcu = createMockLcu({ pages: existingPages });
 
@@ -130,6 +130,25 @@ test('setRunePage creates new page when no editable page is found', async () => 
   assert.equal(lcu.calls.posts[0].body.current, true);
 });
 
+test('setRunePage leaves an editable page with a different name untouched', async () => {
+  const existingPages = [
+    { id: 101, name: 'Jungle Lethality', isEditable: true, current: true }
+  ];
+  const lcu = createMockLcu({ pages: existingPages });
+
+  const result = await setRunePage(lcu, {
+    primaryStyleId: 8000,
+    subStyleId: 8100,
+    selectedPerkIds: [8010],
+    replace: true
+  });
+
+  assert.equal(result.success, true);
+  assert.equal(result.pageId, 20);
+  assert.equal(lcu.calls.puts.length, 0, 'Must not overwrite a page the user named');
+  assert.equal(lcu.calls.posts.length, 1);
+});
+
 test('setRunePage creates new page when replace is false even if editable page exists', async () => {
   const existingPages = [
     { id: 101, name: 'Custom Page', isEditable: true, current: true }
@@ -152,7 +171,7 @@ test('setRunePage creates new page when replace is false even if editable page e
 });
 
 test('setRunePage throws when PUT fails', async () => {
-  const existingPages = [{ id: 101, isEditable: true, current: true }];
+  const existingPages = [{ id: 101, name: 'Antigravity Runes', isEditable: true, current: true }];
   const lcu = createMockLcu({ pages: existingPages, putStatus: 500 });
 
   await assert.rejects(

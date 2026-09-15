@@ -19,7 +19,7 @@
  * }>}
  */
 export async function createLobby(lcu, { queueId, startMatchmaking = false } = {}) {
-  if (!lcu || (typeof lcu.get !== 'function' && typeof lcu.request !== 'function')) {
+  if (!lcu || typeof lcu.get !== 'function' || typeof lcu.request !== 'function') {
     throw new Error('LCU client is required');
   }
 
@@ -27,17 +27,10 @@ export async function createLobby(lcu, { queueId, startMatchmaking = false } = {
     throw new Error('queueId is required and must be a number');
   }
 
-  let currentLobby = null;
-  try {
-    const res = typeof lcu.get === 'function'
-      ? await lcu.get('/lol-lobby/v2/lobby')
-      : await lcu.request('GET', '/lol-lobby/v2/lobby');
-    if (res && res.status === 200 && res.body) {
-      currentLobby = res.body;
-    }
-  } catch {
-    // Client may return 404 if not currently in a lobby
-  }
+  // The client answers 404 when there is no lobby; only a dead client throws,
+  // and that is worth surfacing rather than treating as "no lobby".
+  const res = await lcu.get('/lol-lobby/v2/lobby');
+  const currentLobby = res && res.status === 200 && res.body ? res.body : null;
 
   const alreadyInSameQueue = currentLobby?.gameConfig?.queueId === queueId;
   let message = 'Lobby created';

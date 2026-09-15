@@ -7,9 +7,24 @@ import { registerWorkflowTools } from '../src/tools/workflow.js';
 import { createServer } from '../src/index.js';
 import { fakeContext } from './helpers/context.js';
 
+// The macros mutate the client, so every write they send is checked against the
+// same allowlist lol_request uses. Tests get the lines the shipped config carries
+// unless they pass their own config to exercise a refusal.
+const allowlistConfig = {
+  writeAllowlist: [
+    'POST /lol-matchmaking/v1/ready-check/accept',
+    'POST /lol-lobby/v2/lobby',
+    'POST /lol-lobby/v2/lobby/matchmaking/search',
+    'PATCH /lol-champ-select/v1/session/actions/*',
+    'POST /lol-perks/v1/pages',
+    'PUT /lol-perks/v1/pages/*'
+  ],
+  configPath: 'config/allowlist.json'
+};
+
 async function connect(ctx) {
   const server = new McpServer({ name: 'test-workflow', version: '1.0.0' });
-  registerWorkflowTools(server, ctx);
+  registerWorkflowTools(server, { config: allowlistConfig, ...ctx });
   const client = new Client({ name: 'test', version: '1.0' });
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   await Promise.all([client.connect(clientTransport), server.server.connect(serverTransport)]);
@@ -29,39 +44,40 @@ test('registers all 4 workflow tools with proper annotations, titles, and descri
     'lol_workflow_runes_set'
   ]);
 
+  // A lock-in cannot be undone, a rune page overwrite destroys the old one, and
+  // creating a lobby replaces whatever lobby is open — none of that is a
+  // non-destructive, repeatable call.
+  const expectedAnnotations = {
+    lol_workflow_matchmaking_accept: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    lol_workflow_champ_select: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true },
+    lol_workflow_runes_set: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
+    lol_workflow_lobby: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true }
+  };
+
   for (const tool of workflowTools) {
-    assert.deepEqual(tool.annotations, {
-      readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: true
-    });
+    assert.deepEqual(tool.annotations, expectedAnnotations[tool.name], tool.name);
   }
 
   const acceptTool = workflowTools.find((t) => t.name === 'lol_workflow_matchmaking_accept');
   assert.equal(acceptTool.title, 'Accept matchmaking ready check');
-  assert.equal(acceptTool.description, 'Checks matchmaking ready check status and accepts if match is found.');
+  assert.match(acceptTool.description, /accepts if match is found/);
+  assert.match(acceptTool.description, /write allowlist/);
 
   const champSelectTool = workflowTools.find((t) => t.name === 'lol_workflow_champ_select');
   assert.equal(champSelectTool.title, 'Pick, hover, or ban champion in champion select');
-  assert.equal(
-    champSelectTool.description,
-    'Resolves local player action in active champion select, chooses champion by name or ID, and hovers or locks in.'
-  );
+  assert.match(champSelectTool.description, /chooses champion by name or ID, and hovers or locks in/);
+  assert.match(champSelectTool.description, /write allowlist/);
 
   const runesTool = workflowTools.find((t) => t.name === 'lol_workflow_runes_set');
   assert.equal(runesTool.title, 'Set or update active rune/perk page');
-  assert.equal(
-    runesTool.description,
-    'Creates or updates an editable rune page with specified primary/sub styles and perk IDs and sets it active.'
-  );
+  assert.match(runesTool.description, /perk IDs and sets it active/);
+  assert.match(runesTool.description, /only when its name matches/);
+  assert.match(runesTool.description, /write allowlist/);
 
   const lobbyTool = workflowTools.find((t) => t.name === 'lol_workflow_lobby');
   assert.equal(lobbyTool.title, 'Create game lobby and optionally start matchmaking');
-  assert.equal(
-    lobbyTool.description,
-    'Creates a custom or matchmade lobby for a queue (e.g. 420 for Ranked Solo, 450 for ARAM) and optionally starts matchmaking queue search.'
-  );
+  assert.match(lobbyTool.description, /optionally starts matchmaking queue search/);
+  assert.match(lobbyTool.description, /write allowlist/);
 
   await client.close();
 });
@@ -290,7 +306,7 @@ test('lol_workflow_runes_set updates existing editable page with defaults', asyn
           return {
             status: 200,
             body: [
-              { id: 42, isEditable: true, current: true, name: 'Old Page' }
+              { id: 42, isEditable: true, current: true, name: 'Antigravity Runes' }
             ]
           };
         }
@@ -492,6 +508,61 @@ test('lol_workflow_lobby returns error via guard when LCU fails', async () => {
 
   assert.equal(result.isError, true);
   assert.match(result.content[0].text, /Failed to create lobby: HTTP 500/);
+
+  await client.close();
+});
+
+test('lol_workflow_lobby refuses a write that is not on the allowlist', async () => {
+  let sent = false;
+  const ctx = {
+    config: { writeAllowlist: ['POST /lol-matchmaking/v1/ready-check/accept'], configPath: 'config/allowlist.json' },
+    lcu: {
+      get: async () => ({ status: 404 }),
+      request: async () => {
+        sent = true;
+        return { status: 200 };
+      }
+    }
+  };
+
+  const { client } = await connect(ctx);
+  const result = await client.callTool({
+    name: 'lol_workflow_lobby',
+    arguments: { queueId: 420 }
+  });
+
+  assert.equal(result.isError, true);
+  assert.match(result.content[0].text, /POST \/lol-lobby\/v2\/lobby/);
+  assert.match(result.content[0].text, /writeAllowlist/);
+  assert.equal(sent, false, 'A refused write must never reach the client');
+
+  await client.close();
+});
+
+test('lol_workflow_champ_select refuses an ambiguous partial champion name', async () => {
+  const ctx = {
+    lcu: {
+      get: async () => ({ status: 200, body: { localPlayerCellId: 1, actions: [] } }),
+      request: async () => ({ status: 204 })
+    },
+    staticData: {
+      load: async () => [
+        { id: 10, name: 'Kayle' },
+        { id: 145, name: "Kai'Sa" }
+      ]
+    }
+  };
+
+  const { client } = await connect(ctx);
+  const result = await client.callTool({
+    name: 'lol_workflow_champ_select',
+    arguments: { champion: 'Ka' }
+  });
+
+  assert.equal(result.isError, true);
+  assert.match(result.content[0].text, /ambiguous/i);
+  assert.match(result.content[0].text, /Kayle/);
+  assert.match(result.content[0].text, /Kai'Sa/);
 
   await client.close();
 });

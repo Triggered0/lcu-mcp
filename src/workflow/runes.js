@@ -1,7 +1,7 @@
 /**
  * Runes / perks configuration workflow engine.
  *
- * Discovers existing rune pages, updates an existing editable page,
+ * Discovers existing rune pages, updates the page this macro owns,
  * or creates and activates a new page.
  */
 
@@ -14,7 +14,7 @@
  * @param {number} options.primaryStyleId - Primary perk style / tree ID
  * @param {number} options.subStyleId - Secondary perk style / tree ID
  * @param {number[]} options.selectedPerkIds - Array of selected perk / rune IDs
- * @param {boolean} [options.replace=true] - Whether to mutate existing editable page if available
+ * @param {boolean} [options.replace=true] - Whether to reuse an existing page of the same name
  * @returns {Promise<{
  *   success: boolean,
  *   pageId: number,
@@ -35,7 +35,7 @@ export async function setRunePage(
     replace = true
   } = {}
 ) {
-  if (!lcu || (typeof lcu.get !== 'function' && typeof lcu.request !== 'function')) {
+  if (!lcu || typeof lcu.get !== 'function' || typeof lcu.request !== 'function') {
     throw new Error('LCU client is required');
   }
 
@@ -51,14 +51,7 @@ export async function setRunePage(
     throw new Error('selectedPerkIds is required and must be a non-empty array');
   }
 
-  let pagesRes;
-  try {
-    pagesRes = typeof lcu.get === 'function'
-      ? await lcu.get('/lol-perks/v1/pages')
-      : await lcu.request('GET', '/lol-perks/v1/pages');
-  } catch (err) {
-    throw new Error(`Failed to fetch rune pages: ${err.message}`);
-  }
+  const pagesRes = await lcu.get('/lol-perks/v1/pages');
 
   if (!pagesRes || (pagesRes.status && pagesRes.status >= 400) || !Array.isArray(pagesRes.body)) {
     throw new Error(`Failed to fetch rune pages: HTTP ${pagesRes?.status}`);
@@ -68,8 +61,11 @@ export async function setRunePage(
   const targetName = name || 'Antigravity Runes';
 
   if (replace) {
-    const editablePage = pages.find((p) => p.isEditable && p.current) || pages.find((p) => p.isEditable);
-    if (editablePage) {
+    // Only ever overwrite the page this macro owns. Matching on name keeps
+    // repeated calls idempotent without clobbering a page the user built by
+    // hand — reusing "whatever is editable" silently destroyed saved runes.
+    const ownPage = pages.find((p) => p.isEditable && p.name === targetName);
+    if (ownPage) {
       const putPayload = {
         name: targetName,
         primaryStyleId,
@@ -78,14 +74,14 @@ export async function setRunePage(
         current: true
       };
 
-      const putRes = await lcu.request('PUT', `/lol-perks/v1/pages/${editablePage.id}`, putPayload);
+      const putRes = await lcu.request('PUT', `/lol-perks/v1/pages/${ownPage.id}`, putPayload);
       if (putRes && putRes.status && putRes.status >= 400) {
         throw new Error(`Failed to update rune page: HTTP ${putRes.status}`);
       }
 
       return {
         success: true,
-        pageId: editablePage.id,
+        pageId: ownPage.id,
         name: targetName,
         primaryStyleId,
         subStyleId,
@@ -95,7 +91,7 @@ export async function setRunePage(
     }
   }
 
-  // If not replacing or no editable page found, create a new one
+  // No page of ours to reuse (or the caller asked for a fresh one): create it.
   const postPayload = {
     name: targetName,
     primaryStyleId,

@@ -182,6 +182,13 @@ await record('forensics tools (correlate & bundle)', async () => {
 });
 
 await record('workflow tools (matchmaking accept)', async () => {
+  // Every other stage here is read-only. This one can accept a real queue pop,
+  // so check first and bail out rather than drop the developer into a ranked game.
+  const { body: readyCheck } = await lcu.get('/lol-matchmaking/v1/ready-check');
+  if (readyCheck?.state === 'InProgress') {
+    throw new Inconclusive('a ready check is live — skipped so the smoke run cannot accept a real match');
+  }
+
   const serverCtx = buildContext({});
   const server = createServer(serverCtx);
   const client = new Client({ name: 'smoke-workflow', version: '1.0' });
@@ -197,7 +204,9 @@ await record('workflow tools (matchmaking accept)', async () => {
       throw new Error(`lol_workflow_matchmaking_accept failed: ${result.content?.[0]?.text}`);
     }
     const data = JSON.parse(result.content[0].text);
-    return `state: ${data.state}, response: ${data.playerResponse}, message: ${data.message}`;
+    // With no ready check live the accept path cannot be exercised, but the
+    // round trip still proves the tool is registered, gated and reachable.
+    return `tool reachable, no ready check to accept (state ${data.state})`;
   } finally {
     await client.close();
     serverCtx.networkTailer?.stop?.();

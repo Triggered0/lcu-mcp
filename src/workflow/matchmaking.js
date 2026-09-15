@@ -11,23 +11,13 @@
  * @returns {Promise<{ success: boolean, state: string, playerResponse: string, message: string }>}
  */
 export async function acceptReadyCheck(lcu) {
-  if (!lcu || (typeof lcu.get !== 'function' && typeof lcu.request !== 'function')) {
+  if (!lcu || typeof lcu.get !== 'function' || typeof lcu.request !== 'function') {
     throw new Error('LCU client is required');
   }
 
-  let res;
-  try {
-    res = typeof lcu.get === 'function'
-      ? await lcu.get('/lol-matchmaking/v1/ready-check')
-      : await lcu.request('GET', '/lol-matchmaking/v1/ready-check');
-  } catch {
-    return {
-      success: false,
-      state: 'None',
-      playerResponse: 'None',
-      message: 'Ready check is not currently in progress'
-    };
-  }
+  // A closed client throws instead of answering 404, and "the client is down" is
+  // a different diagnosis from "no ready check" — let that error propagate.
+  const res = await lcu.get('/lol-matchmaking/v1/ready-check');
 
   if (!res || (res.status && res.status >= 400) || !res.body) {
     return {

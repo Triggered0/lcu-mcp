@@ -46,9 +46,9 @@ const EXPECTED = {
   lol_game_player: [true, false, true, true],
   lol_game_events: [true, false, true, true],
   lol_workflow_matchmaking_accept: [false, false, true, true],
-  lol_workflow_champ_select: [false, false, true, true],
-  lol_workflow_runes_set: [false, false, true, true],
-  lol_workflow_lobby: [false, false, true, true]
+  lol_workflow_champ_select: [false, true, false, true],
+  lol_workflow_runes_set: [false, true, true, true],
+  lol_workflow_lobby: [false, true, false, true]
 };
 
 async function listTools() {

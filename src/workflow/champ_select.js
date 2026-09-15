@@ -26,11 +26,11 @@
  * }>}
  */
 export async function pickOrBanChampion(lcu, staticData, { champion, type = 'pick', completed = true } = {}) {
-  if (!lcu || (typeof lcu.get !== 'function' && typeof lcu.request !== 'function')) {
+  if (!lcu || typeof lcu.get !== 'function' || typeof lcu.request !== 'function') {
     throw new Error('LCU client is required');
   }
 
-  if (champion === undefined || champion === null || champion === '') {
+  if (champion === undefined || champion === null || String(champion).trim() === '') {
     throw new Error('champion is required');
   }
 
@@ -70,8 +70,19 @@ export async function pickOrBanChampion(lcu, staticData, { champion, type = 'pic
     }
 
     const needle = String(champion).trim().toLowerCase();
-    const exact = list.find((c) => String(c.name).toLowerCase() === needle);
-    const match = exact || list.find((c) => String(c.name).toLowerCase().includes(needle));
+    let match = list.find((c) => String(c.name).toLowerCase() === needle);
+
+    if (!match) {
+      const partial = list.filter((c) => String(c.name).toLowerCase().includes(needle));
+      // A lock-in cannot be undone, so an ambiguous prefix must not silently
+      // resolve to whichever champion happens to come first in the catalog.
+      if (partial.length > 1) {
+        throw new Error(
+          `Champion "${champion}" is ambiguous, matches: ${partial.map((c) => c.name).join(', ')}`
+        );
+      }
+      match = partial[0];
+    }
 
     if (!match) {
       throw new Error(`Champion not found: ${champion}`);
@@ -81,18 +92,9 @@ export async function pickOrBanChampion(lcu, staticData, { champion, type = 'pic
     championName = match.name;
   }
 
-  let sessionRes;
-  try {
-    sessionRes = typeof lcu.get === 'function'
-      ? await lcu.get('/lol-champ-select/v1/session')
-      : await lcu.request('GET', '/lol-champ-select/v1/session');
-  } catch {
-    return {
-      success: false,
-      inChampSelect: false,
-      message: 'Not currently in champion select'
-    };
-  }
+  // A closed client throws instead of answering 404, and "the client is down" is
+  // a different diagnosis from "not in champ select" — let that error propagate.
+  const sessionRes = await lcu.get('/lol-champ-select/v1/session');
 
   if (!sessionRes || (sessionRes.status && sessionRes.status >= 400) || !sessionRes.body) {
     return {
