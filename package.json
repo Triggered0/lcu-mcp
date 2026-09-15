@@ -1,6 +1,6 @@
 {
   "name": "lcu-mcp",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "description": "MCP server for the League of Legends client: LCU REST API, live WAMP events & recording, CDP console/DOM access, and OpenAPI schema introspection",
   "license": "MIT",
