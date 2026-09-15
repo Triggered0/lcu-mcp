@@ -14,6 +14,7 @@ const allowlistConfig = {
   writeAllowlist: [
     'POST /lol-matchmaking/v1/ready-check/accept',
     'POST /lol-lobby/v2/lobby',
+    'DELETE /lol-lobby/v2/lobby',
     'POST /lol-lobby/v2/lobby/matchmaking/search',
     'PATCH /lol-champ-select/v1/session/actions/*',
     'POST /lol-perks/v1/pages',

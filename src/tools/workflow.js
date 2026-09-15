@@ -105,8 +105,10 @@ export function registerWorkflowTools(server, ctx) {
       title: 'Create game lobby and optionally start matchmaking',
       description:
         'Creates a custom or matchmade lobby for a queue (e.g. 420 for Ranked Solo, 450 for ARAM) and optionally starts matchmaking queue search. ' +
-        'Replaces the current lobby if it is on another queue. Needs "POST /lol-lobby/v2/lobby" ' +
-        '(and "POST /lol-lobby/v2/lobby/matchmaking/search" for startMatchmaking) on the write allowlist.',
+        'Replaces the current lobby if it is on another queue. If the search fails after a lobby was ' +
+        'created from nothing, that lobby is closed again. Needs "POST /lol-lobby/v2/lobby" (and, for ' +
+        'startMatchmaking, "POST /lol-lobby/v2/lobby/matchmaking/search" plus "DELETE /lol-lobby/v2/lobby" ' +
+        'to undo) on the write allowlist.',
       inputSchema: {
         queueId: z.number().int(),
         startMatchmaking: z.boolean().default(false)

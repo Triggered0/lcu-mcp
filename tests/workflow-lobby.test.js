@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createLobby } from '../src/workflow/lobby.js';
 
-function createMockLcu({ currentLobby = null, lobbyStatus = 200, postLobbyStatus = 200, postSearchStatus = 200 } = {}) {
+function createMockLcu({ currentLobby = null, lobbyStatus = 200, postLobbyStatus = 200, postSearchStatus = 200, deleteLobbyStatus = 204 } = {}) {
   const calls = {
     gets: [],
     posts: []
@@ -22,6 +22,9 @@ function createMockLcu({ currentLobby = null, lobbyStatus = 200, postLobbyStatus
     },
     request: async (method, path, body) => {
       calls.posts.push({ method, path, body });
+      if (method === 'DELETE' && path === '/lol-lobby/v2/lobby') {
+        return { status: deleteLobbyStatus, body: null };
+      }
       if (path === '/lol-lobby/v2/lobby') {
         if (postLobbyStatus >= 400) return { status: postLobbyStatus, body: { message: 'Lobby failed' } };
         return { status: postLobbyStatus, body: { queueId: body?.queueId } };
@@ -131,5 +134,54 @@ test('createLobby throws when search POST fails', async () => {
   await assert.rejects(
     async () => createLobby(lcu, { queueId: 420, startMatchmaking: true }),
     /failed to start matchmaking/i
+  );
+});
+
+test('createLobby closes the lobby it created when matchmaking search fails', async () => {
+  const lcu = createMockLcu({ postSearchStatus: 500 });
+  await assert.rejects(
+    async () => createLobby(lcu, { queueId: 420, startMatchmaking: true }),
+    /closed again/i
+  );
+
+  assert.deepEqual(
+    lcu.calls.posts.map((c) => `${c.method} ${c.path}`),
+    [
+      'POST /lol-lobby/v2/lobby',
+      'POST /lol-lobby/v2/lobby/matchmaking/search',
+      'DELETE /lol-lobby/v2/lobby'
+    ]
+  );
+});
+
+test('createLobby keeps a lobby that replaced an existing one when search fails', async () => {
+  const lcu = createMockLcu({ currentLobby: { gameConfig: { queueId: 440 } }, postSearchStatus: 500 });
+  await assert.rejects(
+    async () => createLobby(lcu, { queueId: 420, startMatchmaking: true }),
+    /cannot be restored/i
+  );
+
+  assert.equal(
+    lcu.calls.posts.filter((c) => c.method === 'DELETE').length,
+    0,
+    'Undoing here would leave the caller in no lobby at all'
+  );
+});
+
+test('createLobby does not close a lobby it did not create when search fails', async () => {
+  const lcu = createMockLcu({ currentLobby: { gameConfig: { queueId: 420 } }, postSearchStatus: 500 });
+  await assert.rejects(
+    async () => createLobby(lcu, { queueId: 420, startMatchmaking: true }),
+    /still in the queue 420 lobby/i
+  );
+
+  assert.equal(lcu.calls.posts.filter((c) => c.method === 'DELETE').length, 0);
+});
+
+test('createLobby reports when closing the lobby it created also fails', async () => {
+  const lcu = createMockLcu({ postSearchStatus: 500, deleteLobbyStatus: 500 });
+  await assert.rejects(
+    async () => createLobby(lcu, { queueId: 420, startMatchmaking: true }),
+    /still open.*HTTP 500/i
   );
 });
