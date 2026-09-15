@@ -57,8 +57,8 @@ export function registerDomTools(server, ctx) {
         );
       }
       const { value, exceptionDetails } = await ctx.cdp.evaluate(expression, { awaitPromise });
-      // guard() only redacts thrown errors, and exceptionDetails is a success
-      // payload, so it has to be scrubbed here.
+      // guard() redacts text blocks in the outer result, and safeDetails provides
+      // explicit inner field sanitization as defense-in-depth.
       const secrets = ctx.secrets?.() ?? [];
       const safeDetails =
         exceptionDetails === null

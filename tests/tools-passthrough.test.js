@@ -99,3 +99,14 @@ test('an LCU failure comes back as a tool error', async () => {
   assert.match(result.content[0].text, /not running/);
   await client.close();
 });
+
+test('lol_get redacts secrets from successful response payload', async () => {
+  const { ctx } = recordingContext();
+  ctx.lcu.get = async () => ({ status: 200, body: { auth: 'S3cr3t-Pa55', user: 'riot' } });
+  const client = await connect(ctx);
+  const result = await client.callTool({ name: 'lol_get', arguments: { path: '/_riotclient/command-line-args' } });
+  assert.equal(result.isError, undefined);
+  assert.ok(!result.content[0].text.includes('S3cr3t-Pa55'));
+  assert.ok(result.content[0].text.includes('***'));
+  await client.close();
+});

@@ -9,12 +9,21 @@ export function fail(message) {
   return { isError: true, content: [{ type: 'text', text: message }] };
 }
 
-export function guard(handler, ctx) {
+export function guard(handler, ctx = {}) {
   return async (args, extra) => {
     try {
-      return await handler(args, extra);
+      const result = await handler(args, extra);
+      const secrets = ctx?.secrets?.() ?? [];
+      if (result?.content && Array.isArray(result.content) && Array.isArray(secrets) && secrets.length > 0) {
+        for (const block of result.content) {
+          if (block && typeof block.text === 'string') {
+            block.text = redactSecrets(block.text, secrets);
+          }
+        }
+      }
+      return result;
     } catch (err) {
-      return fail(redactSecrets(err?.message ?? String(err), ctx.secrets?.() ?? []));
+      return fail(redactSecrets(err?.message ?? String(err), ctx?.secrets?.() ?? []));
     }
   };
 }

@@ -31,6 +31,17 @@ test('guard redacts secrets out of thrown messages', async () => {
   assert.ok(result.content[0].text.includes('***'));
 });
 
+test('guard redacts secrets out of successful tool output', async () => {
+  const ctx = fakeContext();
+  const handler = guard(async () => {
+    return ok({ message: 'token is S3cr3t-Pa55' });
+  }, ctx);
+  const result = await handler({});
+  assert.equal(result.isError, undefined);
+  assert.ok(!result.content[0].text.includes('S3cr3t-Pa55'));
+  assert.ok(result.content[0].text.includes('***'));
+});
+
 test('the server registers exactly the tools wired so far', async () => {
   const { client } = await connect(fakeContext());
   const names = (await client.listTools()).tools.map((t) => t.name).sort();

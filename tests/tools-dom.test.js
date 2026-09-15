@@ -134,3 +134,22 @@ test('a password in a page exception never reaches the tool result', async () =>
   const result = await handlers.get('lol_eval')({ expression: 'x' });
   assert.ok(!result.content[0].text.includes('super-secret-pw'));
 });
+
+test('a password in eval value never reaches the tool result', async () => {
+  const ctx = {
+    config: { allowEval: true, configPath: 'config/allowlist.json' },
+    cdp: {
+      evaluate: async () => ({
+        value: { token: 'super-secret-pw' },
+        exceptionDetails: null
+      })
+    },
+    secrets: () => ['super-secret-pw']
+  };
+  const handlers = new Map();
+  registerDomTools({ registerTool: (name, _meta, handler) => handlers.set(name, handler) }, ctx);
+  const result = await handlers.get('lol_eval')({ expression: 'window.token' });
+  assert.ok(!result.content[0].text.includes('super-secret-pw'));
+  assert.ok(result.content[0].text.includes('***'));
+});
+
