@@ -26,7 +26,10 @@ test('lol_schema registers tool with expected title and description', async () =
   assert.equal(tool.title, 'Query LCU OpenAPI/Swagger schema');
   assert.equal(
     tool.description,
-    "Inspect internal LCU API endpoint signatures, parameters, request bodies, and models using the client's live OpenAPI/Swagger v2 specification."
+    "Inspect internal LCU API endpoint signatures, parameters, request bodies, and data models using the League client's live OpenAPI/Swagger v2 specification. " +
+    "Use this tool to find the exact request schema, parameter types, or response models before invoking lol_request. " +
+    "For a lightweight list of common endpoints, use lol_endpoints instead. For static game assets (champions, items, runes), use lol_static instead. " +
+    "Prerequisite: League client must be running to fetch swagger doc; cached in memory after first load."
   );
   await client.close();
 });

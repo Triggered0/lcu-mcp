@@ -25,6 +25,8 @@
     "test": "node --test",
     "lint": "node scripts/lint.mjs",
     "smoke": "node scripts/smoke.mjs",
+    "tdqs:lint": "tdqs lint --command \"node bin/lcu-mcp.js\"",
+    "tdqs:score": "node --env-file=.env ./node_modules/mcp-tdqs/dist/cli.js score --command \"node bin/lcu-mcp.js\" --concurrency 1",
     "prepare": "git config core.hooksPath .githooks || true"
   },
   "repository": {
@@ -47,5 +49,8 @@
     "@modelcontextprotocol/sdk": "^1.29.0",
     "ws": "^8.18.0",
     "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "mcp-tdqs": "^0.2.0"
   }
 }

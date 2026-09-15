@@ -7,15 +7,17 @@ export function registerEventTools(server, ctx) {
     {
       title: 'Start buffering LCU events',
       description:
-        'Open the OnJsonApiEvent tap and buffer events in memory. Filters are URI prefixes applied ' +
-        'at ingest, e.g. "/lol-champ-select/" — the unfiltered firehose fills the buffer in seconds, ' +
-        'so pass filters unless you truly want everything. Calling this while already running ' +
-        'replaces the filters and keeps buffered entries.',
+        'Open the League Client WebSocket event tap and buffer live OnJsonApiEvent Create/Update/Delete notifications in memory. ' +
+        'Use this tool to monitor real-time client state changes (such as champ select progress, gameflow phase, or lobby party updates). ' +
+        'To poll buffered events, call lol_events_poll. To record raw WAMP frames with socket lifecycle diagnostics, use lol_wamp_record_start instead. ' +
+        'For static game assets, use lol_static instead. ' +
+        'Behavior: Ring buffer evicts oldest events after buffer limit is reached. Calling while running updates URI filters and preserves already buffered events. ' +
+        'Prerequisite: League client must be running.',
       inputSchema: {
         filters: z
           .array(z.string().startsWith('/'))
           .optional()
-          .describe('URI prefixes, e.g. ["/lol-champ-select/", "/lol-gameflow/"]')
+          .describe('Array of URI prefix filters applied at ingest (e.g. ["/lol-champ-select/", "/lol-gameflow/"]); omit for unfiltered firehose')
       },
       annotations: {
         readOnlyHint: false,
@@ -42,14 +44,15 @@ export function registerEventTools(server, ctx) {
     {
       title: 'Drain buffered LCU events',
       description:
-        'Return buffered events with seq greater than "since", plus the new cursor. A non-zero ' +
-        '"dropped" means the buffer wrapped and that many events were lost after your cursor. ' +
-        'Entries with truncated: true had their data clipped at 4 KB — re-fetch the full body with ' +
-        'lol_get on the entry uri.',
+        'Drain buffered League Client WebSocket events recorded since a given sequence cursor, returning events and the new cursor. ' +
+        'Use this tool to incrementally consume live client events after calling lol_events_start. ' +
+        'For recording full WAMP traffic frames, use lol_wamp_record_dump instead. ' +
+        'If an event payload indicates truncated: true, use lol_get on the entry URI to fetch the full resource. ' +
+        'Behavior: Safe and read-only. A non-zero dropped count indicates buffer overflow between polls.',
       inputSchema: {
-        since: z.number().int().min(0).optional().describe('cursor from the previous poll; omit to start at 0'),
-        limit: z.number().int().min(1).max(500).optional().describe('max entries to return, default 100'),
-        filter: z.string().optional().describe('extra URI prefix applied at poll time')
+        since: z.number().int().min(0).optional().describe('Monotonic sequence cursor from the previous poll call; omit or set to 0 to read from start of buffer'),
+        limit: z.number().int().min(1).max(500).optional().describe('Maximum number of event entries to return (1-500, default: 100)'),
+        filter: z.string().optional().describe('Optional case-insensitive URI prefix substring applied as a post-filter at poll time')
       },
       annotations: {
         readOnlyHint: true,
@@ -68,7 +71,12 @@ export function registerEventTools(server, ctx) {
     'lol_events_stop',
     {
       title: 'Stop buffering LCU events',
-      description: 'Close the event tap. Buffered entries stay readable with lol_events_poll.',
+      description:
+        'Close the League Client WebSocket event tap and stop buffering live events. ' +
+        'Use this tool to pause or end event collection and conserve memory. ' +
+        'Buffered events remain readable via lol_events_poll after stopping. ' +
+        'For stopping WAMP recording, use lol_wamp_record_stop instead. ' +
+        'Behavior: Idempotent; safe to call when already stopped.',
       inputSchema: {},
       annotations: {
         readOnlyHint: false,

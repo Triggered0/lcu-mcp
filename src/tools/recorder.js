@@ -10,19 +10,17 @@ export function registerRecorderTools(server, ctx) {
     {
       title: 'Start recording LCU WAMP traffic',
       description:
-        'Open a second WAMP socket to the LCU, independent of lol_events_*, and record every ' +
-        'frame plus the socket lifecycle (open, close with its code, error, reconnect gap) into ' +
-        'one timeline. Defaults to the firehose, which is what lets you tell "the socket died" ' +
-        '(every URI goes quiet at once) from "nothing happened" (one URI quiet, others flowing). ' +
-        'Passing uris subscribes per URI instead, which reproduces what a page-side plugin sees ' +
-        'but cannot distinguish those two cases. Starting while a recording is already running ' +
-        'is an error: pass restart to discard the old one.',
+        'Open a dedicated secondary WAMP WebSocket connection to the League Client and record raw frames alongside socket lifecycle events into a chronological timeline. ' +
+        'Use this tool for deep protocol diagnostics, debugging connection drops, or analyzing WAMP message flows. ' +
+        'For lightweight high-level event polling, prefer lol_events_start instead. ' +
+        'To dump recorded frames, call lol_wamp_record_dump. ' +
+        'Behavior: Captures open, close (with exit codes), errors, reconnect gaps, and message frames. Starting while already recording throws an error unless restart is true.',
       inputSchema: {
         uris: z
           .array(z.string().startsWith('/'))
           .optional()
-          .describe('subscribe per URI instead of the firehose, e.g. ["/lol-gameflow/v1/gameflow-phase"]'),
-        restart: z.boolean().optional().describe('discard a running recording and start a fresh one')
+          .describe('Optional array of specific URI paths to subscribe to (e.g. ["/lol-gameflow/v1/gameflow-phase"]); defaults to the full firehose'),
+        restart: z.boolean().optional().describe('Whether to discard an active recording session and immediately begin a fresh timeline (default: false)')
       },
       annotations: {
         readOnlyHint: false,
@@ -39,18 +37,17 @@ export function registerRecorderTools(server, ctx) {
     {
       title: 'Dump the recorded WAMP timeline',
       description:
-        'Return the recorded timeline plus per-URI stats. "stats" is cumulative since the ' +
-        'recording started and survives buffer eviction, so a URI that fired and was evicted is ' +
-        'still distinguishable from one that never fired. A non-zero "dropped" means entries ' +
-        'after your cursor were evicted. Lifecycle entries survive a uri filter; only "kinds" ' +
-        'can exclude them. Times are epoch milliseconds, comparable with the page clock.',
+        'Retrieve recorded WAMP timeline entries, socket lifecycle events, and cumulative per-URI statistics from the recorder buffer. ' +
+        'Use this tool to inspect recorded WebSocket frames and diagnose whether a quiet URI received no traffic or the socket disconnected. ' +
+        'Prerequisite: lol_wamp_record_start must have been called. For general timeline correlation across multiple subsystems, use lol_forensics_correlate. ' +
+        'Behavior: Returns timestamped entries, dropped frame count, and cumulative per-URI stats surviving eviction.',
       inputSchema: {
-        uri: z.string().optional().describe('URI prefix filter, applied to event entries only'),
-        since: z.number().optional().describe('lower bound on ts, epoch milliseconds'),
-        until: z.number().optional().describe('upper bound on ts, epoch milliseconds'),
-        kinds: z.array(z.enum(KINDS)).optional().describe('restrict to these entry kinds'),
-        limit: z.number().int().min(1).max(2000).optional().describe('max entries, default 100'),
-        cursor: z.number().int().min(0).optional().describe('seq cursor from a previous dump')
+        uri: z.string().optional().describe('Filter event entries by URI prefix; lifecycle events survive this filter'),
+        since: z.number().optional().describe('Lower timestamp bound in epoch milliseconds'),
+        until: z.number().optional().describe('Upper timestamp bound in epoch milliseconds'),
+        kinds: z.array(z.enum(KINDS)).optional().describe('Filter entries strictly to specified event kinds (e.g. ["event", "open", "close", "error", "reconnect"])'),
+        limit: z.number().int().min(1).max(2000).optional().describe('Maximum entries to return (1-2000, default: 100)'),
+        cursor: z.number().int().min(0).optional().describe('Sequence cursor from a previous dump call for incremental pagination')
       },
       annotations: {
         readOnlyHint: true,
@@ -70,7 +67,10 @@ export function registerRecorderTools(server, ctx) {
     'lol_wamp_record_stop',
     {
       title: 'Stop recording LCU WAMP traffic',
-      description: 'Close the recorder socket. The recorded timeline stays readable with lol_wamp_record_dump.',
+      description:
+        'Terminate the dedicated WAMP recorder WebSocket connection and halt traffic capture. ' +
+        'Use this tool when WAMP diagnostic recording is finished. Recorded entries remain accessible via lol_wamp_record_dump. ' +
+        'Behavior: Idempotent; safe to call when already stopped.',
       inputSchema: {},
       annotations: {
         readOnlyHint: false,

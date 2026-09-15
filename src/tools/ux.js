@@ -24,20 +24,24 @@ export function registerUxTools(server, ctx) {
     {
       title: 'Restart the League Client UX',
       description:
-        'Terminates and restarts the League Client UX (frontend CEF renderers) via Riot Client. ' +
-        'Essential when developing Pengu Loader plugins or recovering from a frozen interface.',
+        'Terminate and relaunch the League Client user interface frontend (Chromium Embedded Framework renderers) via Riot Client API. ' +
+        'Use this tool to recover from a frozen client UI, apply Pengu Loader plugin changes, or reload corrupted UI states without closing the League game process. ' +
+        'For gameflow or lobby navigation, use lol_workflow_* tools instead. ' +
+        'Behavior: Destructive to current UI state (severs active CDP and WebSocket connections). ' +
+        'When waitForReady is true, cleanly polls until LCU HTTP API and CDP page target are restored. ' +
+        'Prerequisite: Riot Client and LCU process must be running.',
       inputSchema: {
         waitForReady: z
           .boolean()
           .default(true)
-          .describe('Wait until both LCU API and CDP target are fully responsive after restart'),
+          .describe('Whether to block and poll until both LCU REST API and CDP renderer target are fully responsive after restart'),
         timeoutSeconds: z
           .number()
           .int()
           .min(2)
           .max(60)
           .default(20)
-          .describe('Maximum seconds to wait for UX readiness when waitForReady is true')
+          .describe('Maximum seconds to wait for UX and CDP readiness when waitForReady is true (2-60, default: 20)')
       },
       annotations: {
         readOnlyHint: false,

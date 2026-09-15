@@ -6,9 +6,9 @@ export function registerStatusTool(server, ctx) {
     {
       title: 'League client status',
       description:
-        'Health of both subsystems: LCU (lockfile-derived port, connected state) and CDP ' +
-        '(Pengu remote debugging port, attached target), plus event tap state and effective config. ' +
-        'Call this first when another tool fails.',
+        'Inspect overall connectivity, health, and configuration status across all server subsystems (LCU REST/WebSocket, Chrome DevTools Protocol, event buffers, live game engine). ' +
+        'Use this tool first when diagnosing connection failures, verifying lockfile detection, or checking effective allowlist rules and allowEval permissions. ' +
+        'Behavior: Safe and read-only; requires no client write permissions.',
       inputSchema: {},
       annotations: {
         readOnlyHint: true,

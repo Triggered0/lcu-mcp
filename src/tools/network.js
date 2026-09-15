@@ -7,10 +7,12 @@ export function registerNetworkTools(server, ctx) {
     {
       title: 'Start recording client HTTP requests',
       description:
-        'Attach to the client renderer and begin buffering the HTTP requests the client UI makes, ' +
-        'with their status, size, timing and the code that issued them. Call this BEFORE the thing ' +
-        'you want to capture: the buffer only holds what arrived after it started. Response bodies ' +
-        'are not buffered — read them with lol_cdp_network_body.',
+        'Attach to the League Client renderer via Chrome DevTools Protocol (CDP) and begin capturing outgoing and incoming HTTP/HTTPS network requests into an in-memory buffer. ' +
+        'Use this tool to monitor REST traffic, measure endpoint latency, or debug failed API calls made by the client UI. ' +
+        'To inspect captured requests, call lol_cdp_network_tail or lol_cdp_network_summary. ' +
+        'To read response payload bodies, use lol_cdp_network_body with a request ID. ' +
+        'For WebSocket events, use lol_events_* or lol_wamp_record_* instead. ' +
+        'Behavior: Captures request metadata, headers, status codes, and timing. Prerequisite: Active CDP connection.',
       inputSchema: {},
       annotations: {
         readOnlyHint: false,
@@ -27,23 +29,23 @@ export function registerNetworkTools(server, ctx) {
     {
       title: 'Read buffered client HTTP requests',
       description:
-        'Return buffered requests after your cursor, newest last. One entry per completed request. ' +
-        'A request still in flight is reported separately under "inflight", so a hung request stays ' +
-        'visible. Note that a 404 arrives as an ordinary response: use minStatus to find 4xx and 5xx, ' +
-        'and failedOnly only for transport failures. Errors if the tailer is not running rather than ' +
-        'returning an empty result.',
+        'Retrieve captured HTTP network requests from the in-memory buffer, filtered by status, URL pattern, or HTTP method. ' +
+        'Use this tool to inspect recent client network calls and identify 4xx/5xx errors or hung requests. ' +
+        'Prerequisite: Must call lol_cdp_network_start first; fails if network recording is not running. ' +
+        'To fetch full response bodies, pass returned request IDs to lol_cdp_network_body. For aggregated traffic statistics, use lol_cdp_network_summary instead. ' +
+        'Behavior: Returns completed requests and active in-flight requests.',
       inputSchema: {
-        since: z.number().optional().describe('lower bound on ts, epoch milliseconds'),
-        until: z.number().optional().describe('upper bound on ts, epoch milliseconds'),
-        cursor: z.number().int().min(0).optional().describe('seq cursor from a previous tail'),
-        limit: z.number().int().min(1).max(2000).optional().describe('max entries, default 100'),
-        urlContains: z.string().optional().describe('case-insensitive substring of the request url'),
-        method: z.string().optional().describe('HTTP method, matched case-insensitively'),
-        status: z.number().int().optional().describe('exact HTTP status, e.g. 404'),
-        minStatus: z.number().int().optional().describe('minimum HTTP status; use 400 for "what went wrong"'),
-        type: z.string().optional().describe('CDP resource type, e.g. "Fetch" or "Document"'),
-        failedOnly: z.boolean().optional().describe('only transport failures, not 4xx/5xx responses'),
-        targetId: z.string().optional().describe('restrict to one renderer incarnation')
+        since: z.number().optional().describe('Lower timestamp bound in epoch milliseconds; excludes older requests'),
+        until: z.number().optional().describe('Upper timestamp bound in epoch milliseconds; excludes newer requests'),
+        cursor: z.number().int().min(0).optional().describe('Sequence cursor from a previous tail call for incremental reading'),
+        limit: z.number().int().min(1).max(2000).optional().describe('Maximum entries to return (1-2000, default: 100)'),
+        urlContains: z.string().optional().describe('Case-insensitive substring filter matching request URLs, e.g. "/lol-champ-select/"'),
+        method: z.string().optional().describe('HTTP method filter matching verbs case-insensitively, e.g. "GET" or "POST"'),
+        status: z.number().int().optional().describe('Exact HTTP response status code to match, e.g. 404 or 500'),
+        minStatus: z.number().int().optional().describe('Minimum HTTP status code threshold; pass 400 to find all client and server errors'),
+        type: z.string().optional().describe('CDP resource type filter, e.g. "Fetch", "XHR", "Document", or "Script"'),
+        failedOnly: z.boolean().optional().describe('If true, filters strictly for low-level transport/network failures (excludes HTTP 4xx/5xx)'),
+        targetId: z.string().optional().describe('Filter requests to a specific CDP renderer target ID')
       },
       annotations: {
         readOnlyHint: true,
@@ -60,11 +62,12 @@ export function registerNetworkTools(server, ctx) {
     {
       title: 'Read one response body',
       description:
-        'Fetch the response body for a requestId returned by lol_cdp_network_tail. Bodies are not ' +
-        'buffered, so this reaches the live renderer: it errors if the renderer has evicted the ' +
-        'resource, or if the requestId belongs to a renderer incarnation from before a restart.',
+        'Fetch the raw response body payload for a specific captured network request ID from the live renderer. ' +
+        'Use this tool after lol_cdp_network_tail to examine the raw payload or JSON response of an interesting request. ' +
+        'For high-level request metadata or status codes without bodies, lol_cdp_network_tail suffices. ' +
+        'Behavior: Reaches live renderer cache. Prerequisite: Request must have been captured in the current renderer session; fails if evicted or client reloaded.',
       inputSchema: {
-        requestId: z.string().describe('requestId from a lol_cdp_network_tail entry')
+        requestId: z.string().describe('Unique request identifier returned in a lol_cdp_network_tail entry')
       },
       annotations: {
         readOnlyHint: true,
@@ -81,15 +84,15 @@ export function registerNetworkTools(server, ctx) {
     {
       title: 'Summarise buffered client HTTP requests',
       description:
-        'Aggregate buffered requests by method and url, busiest first, with status counts, total ' +
-        'bytes and median duration. The client polls some endpoints several times a second, so this ' +
-        'is how an hour of traffic becomes readable, and how you find which endpoints the client ' +
-        'actually uses.',
+        'Aggregate and summarize captured HTTP requests by method and endpoint URL pattern with status breakdown, total byte volume, and median duration. ' +
+        'Use this tool to analyze high-volume client polling traffic, discover top endpoints, or spot systemic failure rates over time without reading raw request logs. ' +
+        'For individual request inspection with timestamps, use lol_cdp_network_tail instead. ' +
+        'Behavior: Safe and read-only; summarizes in-memory buffer without consuming or altering stream cursors.',
       inputSchema: {
-        since: z.number().optional().describe('lower bound on ts, epoch milliseconds'),
-        until: z.number().optional().describe('upper bound on ts, epoch milliseconds'),
-        urlContains: z.string().optional().describe('case-insensitive substring of the request url'),
-        method: z.string().optional().describe('HTTP method, matched case-insensitively')
+        since: z.number().optional().describe('Lower timestamp bound in epoch milliseconds; excludes older requests'),
+        until: z.number().optional().describe('Upper timestamp bound in epoch milliseconds; excludes newer requests'),
+        urlContains: z.string().optional().describe('Case-insensitive substring filter matching request URLs'),
+        method: z.string().optional().describe('HTTP method filter matching verbs case-insensitively, e.g. "GET" or "POST"')
       },
       annotations: {
         readOnlyHint: true,
@@ -105,7 +108,10 @@ export function registerNetworkTools(server, ctx) {
     'lol_cdp_network_stop',
     {
       title: 'Stop recording client HTTP requests',
-      description: 'Detach and close the tailer socket. Buffered entries are discarded with it.',
+      description:
+        'Detach from the League Client renderer and terminate the network traffic recording session. ' +
+        'Use this tool when network analysis is complete to release memory and close the CDP monitoring session. ' +
+        'Behavior: Discards in-memory network buffers. Idempotent; safe to call when already stopped.',
       inputSchema: {},
       annotations: {
         readOnlyHint: false,

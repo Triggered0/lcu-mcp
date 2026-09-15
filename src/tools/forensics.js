@@ -9,24 +9,27 @@ export function registerForensicsTools(server, ctx) {
     {
       title: 'Correlate LCU WAMP and CDP console timelines',
       description:
-        'Combines WAMP recorder events and CDP console entries into a chronological timeline, ' +
-        'answering whether the client emitted an event and where the frontend broke.',
+        'Correlate events across LCU WAMP, Chrome DevTools Protocol console logs, network requests, disk logs, and live game telemetry into a unified chronological timeline. ' +
+        'Use this tool during incident triage to identify whether client state changes triggered frontend UI errors or network failures. ' +
+        'For a complete system report with status snapshots, use lol_forensics_bundle instead. ' +
+        'For raw console logs alone, use lol_cdp_console_tail. ' +
+        'Behavior: Safe and read-only. Gracefully combines active in-memory streams without interrupting background loggers.',
       inputSchema: {
-        since: z.number().optional().describe('Lower timestamp bound in epoch ms or clock ts'),
-        until: z.number().optional().describe('Upper timestamp bound in epoch ms or clock ts'),
-        limit: z.number().int().min(1).max(1000).default(100).describe('Maximum total events to return'),
+        since: z.number().optional().describe('Lower timestamp bound in epoch milliseconds or clock timestamp'),
+        until: z.number().optional().describe('Upper timestamp bound in epoch milliseconds or clock timestamp'),
+        limit: z.number().int().min(1).max(1000).default(100).describe('Maximum total events to return across all streams (1-1000, default: 100)'),
         sources: z
           .array(z.enum(['wamp', 'cdp', 'network', 'logs', 'game']))
           .optional()
-          .describe('Filter telemetry streams to correlate'),
-        uriPrefix: z.string().optional().describe('Filter WAMP events by URI prefix (e.g. /lol-gameflow/)'),
+          .describe('Array of telemetry stream sources to include: "wamp", "cdp", "network", "logs", "game"'),
+        uriPrefix: z.string().optional().describe('Filter WAMP events by URI prefix (e.g. "/lol-gameflow/")'),
         levels: z
           .array(z.enum(['error', 'warning', 'info', 'log', 'debug']))
           .optional()
-          .describe('Filter CDP console entries by level'),
-        networkFailedOnly: z.boolean().optional().describe('Filter CDP network requests to failed only'),
-        logLevel: z.string().optional().describe('Filter disk log entries by level'),
-        format: z.enum(['narrative', 'events', 'summary']).default('narrative').describe('Output format')
+          .describe('Filter CDP console log entries by severity levels: "error", "warning", "info", "log", "debug"'),
+        networkFailedOnly: z.boolean().optional().describe('If true, restricts CDP network requests strictly to transport/protocol failures'),
+        logLevel: z.string().optional().describe('Filter disk log entries by log level string'),
+        format: z.enum(['narrative', 'events', 'summary']).default('narrative').describe('Output format: "narrative" (Markdown), "events" (JSON array), or "summary"')
       },
       annotations: {
         readOnlyHint: true,
@@ -109,21 +112,23 @@ export function registerForensicsTools(server, ctx) {
     {
       title: 'Generate comprehensive diagnostics bundle across all LCU telemetry streams',
       description:
-        'Collects system status, active timeline streams (WAMP, CDP console, CDP network, disk logs, live game), ' +
-        'and recent disk log tail into a unified Markdown report or structured JSON.',
+        'Generate an all-in-one diagnostic bundle combining system connectivity status, correlated telemetry timelines, and recent disk log tails. ' +
+        'Use this tool as a single-call comprehensive health check or bug report export when diagnosing complex client issues. ' +
+        'For interactive querying of specific streams, use lol_forensics_correlate or subsystem-specific tools. ' +
+        'Behavior: Safe and read-only. Returns Markdown report by default, or structured JSON when specified.',
       inputSchema: {
-        since: z.number().optional().describe('Lower timestamp bound in epoch ms or clock ts'),
-        until: z.number().optional().describe('Upper timestamp bound in epoch ms or clock ts'),
-        limit: z.number().int().min(1).max(2000).default(200).describe('Maximum total events to include in timeline'),
+        since: z.number().optional().describe('Lower timestamp bound in epoch milliseconds or clock timestamp'),
+        until: z.number().optional().describe('Upper timestamp bound in epoch milliseconds or clock timestamp'),
+        limit: z.number().int().min(1).max(2000).default(200).describe('Maximum total events to include in the combined timeline (1-2000, default: 200)'),
         sources: z
           .array(z.enum(['wamp', 'cdp', 'network', 'logs', 'game']))
           .optional()
-          .describe('Filter streams to include'),
+          .describe('Array of telemetry stream sources to include in the bundle: "wamp", "cdp", "network", "logs", "game"'),
         includeLogTail: z
           .boolean()
           .default(true)
-          .describe('Include recent disk log tail if log watcher has no entries'),
-        format: z.enum(['markdown', 'json']).default('markdown').describe('Output format')
+          .describe('Whether to append recent disk log tail if active log watcher has no fresh entries (default: true)'),
+        format: z.enum(['markdown', 'json']).default('markdown').describe('Bundle output format: "markdown" for formatted text report, or "json" for structured object')
       },
       annotations: {
         readOnlyHint: true,

@@ -7,12 +7,11 @@ export function registerConsoleTools(server, ctx) {
     {
       title: 'Start tailing the client console',
       description:
-        'Attach to the client renderer and begin buffering console output and uncaught ' +
-        'exceptions in the background. A page reload does not interrupt this: the debug target ' +
-        'survives it, so logging continues with no gap and no reattach entry. Only when the ' +
-        'target itself is destroyed and recreated — the client UI restarting — does the tailer ' +
-        're-attach, and it records a "reattach" entry for that. Call this BEFORE the thing you ' +
-        'want to capture: the buffer only holds what arrived after it started.',
+        'Attach to the League Client renderer via Chrome DevTools Protocol (CDP) and begin streaming console logs, warnings, and uncaught exceptions into an in-memory buffer. ' +
+        'Use this tool before executing UI actions or testing plugins to capture runtime frontend diagnostics. ' +
+        'To retrieve buffered entries, call lol_cdp_console_tail. To stop capturing and release memory, call lol_cdp_console_stop. ' +
+        'For client log files on disk, use lol_logs_tail instead. ' +
+        'Behavior: Non-destructive; automatically survives renderer page reloads with continuity. Prerequisite: Active CDP connection.',
       inputSchema: {},
       annotations: {
         readOnlyHint: false,
@@ -29,19 +28,19 @@ export function registerConsoleTools(server, ctx) {
     {
       title: 'Read buffered client console output',
       description:
-        'Return buffered console entries after your cursor. Times are epoch milliseconds: "ts" ' +
-        'is this process\'s anchored clock, "pageTs" is the renderer\'s own stamp, and their ' +
-        'difference is a delivery-latency signal. "reattach" entries mark renderer reloads and ' +
-        'survive every filter, because a reload is context for whatever you are reading. Errors ' +
-        'if the tailer is not running rather than returning an empty result.',
+        'Retrieve buffered console logs, warnings, and runtime JavaScript exceptions recorded since the tailer was started or past a given cursor. ' +
+        'Use this tool to inspect frontend errors, check component mounting logs, or debug UI scripts. ' +
+        'Prerequisite: Must call lol_cdp_console_start first; fails if tailer is not running. ' +
+        'For HTTP request traffic, use lol_cdp_network_tail instead. ' +
+        'Behavior: Sequential integer cursors ensure gap-free incremental reading without skipping entries.',
       inputSchema: {
-        since: z.number().optional().describe('lower bound on ts, epoch milliseconds'),
-        until: z.number().optional().describe('upper bound on ts, epoch milliseconds'),
-        cursor: z.number().int().min(0).optional().describe('seq cursor from a previous tail'),
-        limit: z.number().int().min(1).max(2000).optional().describe('max entries, default 100'),
-        level: z.string().optional().describe('console severity, e.g. "error" or "warning"'),
-        targetId: z.string().optional().describe('restrict to one renderer incarnation'),
-        text: z.string().optional().describe('case-insensitive substring of the message')
+        since: z.number().optional().describe('Lower timestamp bound in epoch milliseconds; excludes older entries'),
+        until: z.number().optional().describe('Upper timestamp bound in epoch milliseconds; excludes newer entries'),
+        cursor: z.number().int().min(0).optional().describe('Sequence cursor from a previous tail call for incremental polling'),
+        limit: z.number().int().min(1).max(2000).optional().describe('Maximum number of entries to return (1-2000, default: 100)'),
+        level: z.string().optional().describe('Filter by console severity level, e.g. "error", "warning", "info", or "log"'),
+        targetId: z.string().optional().describe('Filter entries to a specific CDP renderer target ID'),
+        text: z.string().optional().describe('Case-insensitive substring filter matching log message text')
       },
       annotations: {
         readOnlyHint: true,
@@ -61,7 +60,11 @@ export function registerConsoleTools(server, ctx) {
     'lol_cdp_console_stop',
     {
       title: 'Stop tailing the client console',
-      description: 'Detach and close the tailer socket. Buffered entries are discarded with it.',
+      description:
+        'Detach from the League Client renderer and terminate the console log buffering session. ' +
+        'Use this tool when console log capture is complete to release memory and close the CDP socket. ' +
+        'For stopping network request capture, use lol_cdp_network_stop instead. ' +
+        'Behavior: Discards any remaining unread entries from the in-memory buffer. Idempotent; safe to call when already stopped.',
       inputSchema: {},
       annotations: {
         readOnlyHint: false,

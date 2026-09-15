@@ -10,7 +10,9 @@ export function registerCdpTools(server, ctx) {
     {
       title: 'List CDP debugging targets',
       description:
-        'List all active CDP debugging targets (pages, popups, background workers) exposed by the League Client.',
+        'Discover and list all active Chrome DevTools Protocol (CDP) debugging targets (pages, modals, worker contexts) exposed by the League Client. ' +
+        'Use this tool to inspect available renderer contexts and discover target IDs before capturing targeted screenshots with lol_cdp_screenshot or tailing console and network. ' +
+        'Behavior: Safe and read-only. Prerequisite: League client must be running with remote debugging enabled (e.g. via Pengu Loader).',
       inputSchema: {},
       annotations: {
         readOnlyHint: true,
@@ -32,12 +34,17 @@ export function registerCdpTools(server, ctx) {
     {
       title: 'Capture screenshot of the League Client',
       description:
-        'Capture a screenshot of the League Client window using CDP. Returns both an MCP image content block and JSON metadata, and optionally saves to disk.',
+        'Capture a visual screenshot image of the active League Client window or a specific renderer target using Chrome DevTools Protocol (CDP). ' +
+        'When to use: When visual rendering, modal layout, or graphic verification is needed. ' +
+        'When NOT to use: Do not use for automated state checks or element queries (use lol_dom_query) or API data inspection (use lol_get). ' +
+        'Behavior: Safe read of visual pixels from the renderer; writes to local filesystem only when savePath is explicitly supplied. ' +
+        'Prerequisite: League client must be running with remote debugging enabled; check lol_status if disconnected. ' +
+        'Returns dual-payload MCP content with a base64 image data block plus structured JSON metadata (format, dimensions, byte length, savedTo path).',
       inputSchema: {
-        targetId: z.string().optional().describe('CDP target ID to screenshot (defaults to active main page)'),
-        format: z.enum(['png', 'jpeg', 'webp']).default('png').describe('Image format'),
-        quality: z.number().int().min(0).max(100).optional().describe('Compression quality for jpeg/webp'),
-        savePath: z.string().optional().describe('Optional file path to save screenshot on disk')
+        targetId: z.string().optional().describe('Specific CDP target ID to screenshot (defaults to active main client page; query lol_cdp_targets for options)'),
+        format: z.enum(['png', 'jpeg', 'webp']).default('png').describe('Image encoding format: "png" (lossless), "jpeg" (compressed), or "webp"'),
+        quality: z.number().int().min(0).max(100).optional().describe('Image compression quality from 0 to 100; only applicable when format is "jpeg" or "webp"'),
+        savePath: z.string().optional().describe('Optional absolute filesystem path (e.g. "C:/temp/screenshot.png") to save the screenshot on disk')
       },
       annotations: {
         readOnlyHint: false,

@@ -8,11 +8,13 @@ export function registerEndpointsTool(server, ctx) {
     {
       title: 'List curated LCU endpoints',
       description:
-        'The curated endpoint table: the LCU paths this project actually uses, with the verb, a ' +
-        'group, and a one-line description. {placeholder} marks a path parameter. Optional filter is ' +
-        'a case-insensitive substring matched against verb, path, group, and description.',
+        'Search the curated catalog of League Client Update (LCU) REST API endpoints commonly used for automation and monitoring. ' +
+        'Returns matching endpoint paths, HTTP verbs, functional groups, and summary descriptions. ' +
+        'Use this tool to quickly discover available endpoints by keyword (e.g. "champ-select", "lobby", "summoner"). ' +
+        'For full OpenAPI/Swagger schema definitions, parameter types, or data models, use lol_schema instead. ' +
+        'Prerequisite: Works offline without requiring an active League client connection.',
       inputSchema: {
-        filter: z.string().optional().describe('e.g. "champ-select", "ready-check", "summoner"')
+        filter: z.string().optional().describe('Case-insensitive substring filter matching verb, path, group, or description, e.g. "champ-select" or "ready-check"')
       },
       annotations: {
         readOnlyHint: true,

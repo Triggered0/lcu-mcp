@@ -8,7 +8,10 @@ export function registerStaticTools(server, ctx) {
     {
       title: 'Resolve static game data ids to names',
       description:
-        'Resolve numeric game data ids to names using the static documents the League client serves locally. Use this to turn a raw championId, item id, perk id, summoner spell id, map id, or queue id from another tool into something readable, or to search those documents by name.',
+        'Resolve numeric League of Legends game data IDs to human-readable names and metadata using locally served static client documents. ' +
+        'Use this tool to translate raw championId, itemId, perkId, summonerSpellId, mapId, or queueId received from other tools or telemetry events into readable entities. ' +
+        'For live client state, use lol_get instead. For OpenAPI endpoint models, use lol_schema instead. ' +
+        'Prerequisite: League client must be running to fetch static bundles; results are cached.',
       inputSchema: {
         kind: z.enum(STATIC_KINDS).describe('Which static document to query'),
         ids: z.array(z.number()).optional().describe('Exact ids to resolve (e.g. [157] for a championId)'),

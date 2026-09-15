@@ -4,7 +4,8 @@ import { fail, guard, ok } from './result.js';
 
 const pathSchema = z
   .string()
-  .startsWith('/', 'LCU paths must start with "/", e.g. /lol-gameflow/v1/gameflow-phase');
+  .startsWith('/', 'LCU paths must start with "/", e.g. /lol-gameflow/v1/gameflow-phase')
+  .describe('Absolute LCU REST endpoint path starting with "/", e.g. "/lol-gameflow/v1/gameflow-phase" or "/lol-summoner/v1/current-summoner"');
 
 export function registerPassthroughTools(server, ctx) {
   server.registerTool(
@@ -12,8 +13,11 @@ export function registerPassthroughTools(server, ctx) {
     {
       title: 'GET an LCU endpoint',
       description:
-        'GET any LCU path and return { status, body }. Always allowed. ' +
-        'Use lol_endpoints to discover the paths this client is known to expose.',
+        'Send a read-only HTTP GET request to any internal League Client Update (LCU) REST API endpoint and return { status, body }. ' +
+        'Use this tool to inspect live client state such as summoner profile, lobby members, or gameflow phase. ' +
+        'For mutating actions (POST, PUT, PATCH, DELETE), use lol_request instead. ' +
+        'To discover supported endpoint paths, use lol_endpoints or lol_schema. ' +
+        'Prerequisite: League client must be running. Safe and idempotent; requires no write allowlist entries.',
       inputSchema: { path: pathSchema },
       annotations: {
         readOnlyHint: true,
@@ -30,13 +34,14 @@ export function registerPassthroughTools(server, ctx) {
     {
       title: 'Call an LCU endpoint with any verb',
       description:
-        'Send any HTTP verb to an LCU path. GET and HEAD are always allowed; every other verb ' +
-        'must match an entry in the write allowlist, otherwise the call is refused with the exact ' +
-        'config line that would permit it.',
+        'Send an HTTP request with any verb (GET, HEAD, POST, PUT, PATCH, DELETE) to an internal League Client Update (LCU) REST endpoint. ' +
+        'Use this tool to perform client mutations or call endpoints not covered by dedicated workflow tools. ' +
+        'For safe read-only queries, prefer lol_get. For common automated actions like champion selection or lobby creation, prefer lol_workflow_* tools. ' +
+        'Behavior: GET and HEAD are always allowed. Mutating verbs require matching entries in the write allowlist; unauthorized requests are rejected before execution.',
       inputSchema: {
-        method: z.enum(['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE']),
+        method: z.enum(['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE']).describe('HTTP verb to execute against the LCU endpoint'),
         path: pathSchema,
-        body: z.unknown().optional().describe('JSON request body; omit for verbs that take none')
+        body: z.unknown().optional().describe('JSON request body payload; omit for verbs that take none (such as GET or DELETE)')
       },
       annotations: {
         readOnlyHint: false,

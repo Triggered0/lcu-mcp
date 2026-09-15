@@ -15,8 +15,12 @@ export function registerGameTools(server, ctx) {
     {
       title: 'Live game all data',
       description:
-        'Fetch full real-time live game state from the in-match game engine (scores, players, items, events, game time). ' +
-        'By default returns a compact summary to save tokens; set format to "raw" for the complete ~100KB payload.',
+        'Fetch complete real-time in-match game state (scores, player inventories, game time, objectives, events) from the live League game engine. ' +
+        'Use this tool during an active match to get full game telemetry. ' +
+        'For specific player details, use lol_game_player. For game clock and map only, use lol_game_stats. For in-game kill/objective events, use lol_game_events. ' +
+        'For client/lobby data outside matches, use lol_get. ' +
+        'Behavior: Prerequisite: Match must be currently running (Live Client Data API on port 2999). Safe and read-only. ' +
+        'Returns compact summary by default to conserve tokens; pass "raw" for full ~100KB payload.',
       inputSchema: {
         format: z
           .enum(['summary', 'raw'])
@@ -38,7 +42,11 @@ export function registerGameTools(server, ctx) {
     'lol_game_stats',
     {
       title: 'Live game stats',
-      description: 'Check match status and general game clock, mode, and map from the live game engine.',
+      description:
+        'Fetch basic match status, game clock time, game mode, and map ID from the live League game engine. ' +
+        'Use this tool to quickly verify whether a match is currently in progress, check elapsed game time, or identify the game mode. ' +
+        'For full match telemetry including players and scores, use lol_game_all instead. ' +
+        'Behavior: Safe and read-only. Prerequisite: Match must be currently running (port 2999).',
       inputSchema: {},
       annotations: GAME_TOOL_ANNOTATIONS
     },
@@ -52,9 +60,13 @@ export function registerGameTools(server, ctx) {
     'lol_game_player',
     {
       title: 'Live game player data',
-      description: 'Fetch real-time stats, abilities, items, and runes for the active player or a specific summoner.',
+      description:
+        'Fetch real-time live match statistics, item inventory, abilities, and runes for the active local player or a named summoner. ' +
+        'Use this tool to inspect a specific player\'s current gold, level, KDA, items, or rune setup during an active match. ' +
+        'For all players in the match at once, use lol_game_all instead. ' +
+        'Behavior: Safe and read-only. Prerequisite: Match must be currently in progress (port 2999).',
       inputSchema: {
-        name: z.string().optional().describe('Summoner name or Riot ID, or omit for local active player')
+        name: z.string().optional().describe('Summoner name or Riot ID of target player in the current match; omit to fetch local active player')
       },
       annotations: GAME_TOOL_ANNOTATIONS
     },
@@ -84,9 +96,13 @@ export function registerGameTools(server, ctx) {
     'lol_game_events',
     {
       title: 'Live game events',
-      description: 'Retrieve in-game events (kills, objectives, aces, structures) with incremental cursor support.',
+      description:
+        'Retrieve in-game events (champion kills, dragon/baron objectives, turret destructions, aces) from the live game engine. ' +
+        'Use this tool to track recent in-match actions or feed an event timeline. ' +
+        'For full match state including player inventories, use lol_game_all instead. ' +
+        'Behavior: Safe and read-only. Supports incremental cursor via afterId. Prerequisite: Active match running on port 2999.',
       inputSchema: {
-        afterId: z.number().int().min(0).optional().describe('Event ID cursor to fetch events that occurred after')
+        afterId: z.number().int().min(0).optional().describe('Event ID cursor from a previous call to fetch only events that occurred after this ID')
       },
       annotations: GAME_TOOL_ANNOTATIONS
     },
