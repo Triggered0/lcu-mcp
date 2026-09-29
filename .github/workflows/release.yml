@@ -50,7 +50,12 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           if [ -n "$NODE_AUTH_TOKEN" ]; then
+            echo "Publishing to npm using NODE_AUTH_TOKEN secret..."
             npm publish --access public --provenance
           else
-            echo "NPM_TOKEN secret is not configured in repository secrets; skipping npm publish."
+            echo "Publishing to npm using Trusted Publishing (OIDC)..."
+            sed -i '/_authToken/d' ~/.npmrc 2>/dev/null || true
+            sed -i '/_authToken/d' .npmrc 2>/dev/null || true
+            npm publish --access public --provenance
           fi
+
