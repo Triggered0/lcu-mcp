@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { writeFile } from 'node:fs/promises';
+import { dirname } from 'node:path';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { buildHarArchive } from '../diagnostics/har.js';
 import { guard, ok } from './result.js';
 
@@ -47,6 +48,9 @@ export function registerHarExportTool(server, ctx) {
 
         if (savePath) {
           const writeHarFile = ctx?.writeFile ?? writeFile;
+          if (!ctx?.writeFile) {
+            await mkdir(dirname(savePath), { recursive: true });
+          }
           const content = JSON.stringify(archive, null, 2);
           await writeHarFile(savePath, content, 'utf8');
           return ok({

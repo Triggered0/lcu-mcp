@@ -97,7 +97,7 @@ export function analyzeBottlenecks(
   // 2. Endpoint Latency Stats (P50, P90, P99, avgMs, maxMs per normalized pattern)
   const endpointGroups = new Map();
   for (const e of requestEntries) {
-    if (typeof e.durationMs !== 'number') continue;
+    if (!Number.isFinite(e.durationMs)) continue;
     const pattern = normalizeEndpoint(e.url);
     let group = endpointGroups.get(pattern);
     if (!group) {
@@ -124,7 +124,6 @@ export function analyzeBottlenecks(
       maxMs
     };
     endpointLatencyStats.push(statItem);
-    endpointLatencyStats[endpoint] = statItem;
   }
 
   endpointLatencyStats.sort((a, b) => b.p90 - a.p90 || b.count - a.count);
