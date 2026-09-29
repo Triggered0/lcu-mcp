@@ -95,6 +95,7 @@ test('the server registers exactly the tools wired so far', async () => {
     'lol_wamp_record_start',
     'lol_wamp_record_stop',
     'lol_workflow_champ_select',
+    'lol_workflow_champ_select_bench',
     'lol_workflow_lobby',
     'lol_workflow_matchmaking_accept',
     'lol_workflow_runes_set',
