@@ -42,6 +42,7 @@ const EXPECTED = {
   lol_forensics_anomaly_detect: [true, false, true, false],
   lol_forensics_bundle: [true, false, true, true],
   lol_forensics_correlate: [true, false, true, false],
+  lol_forensics_export_har: [true, false, true, false],
   lol_logs_tail: [true, false, true, true],
   lol_logs_watch_start: [false, false, true, true],
   lol_logs_watch_poll: [true, false, true, false],

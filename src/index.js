@@ -32,6 +32,7 @@ import { registerDomTreeTool } from './tools/cdp_dom_tree.js';
 import { registerStorageTool } from './tools/cdp_storage.js';
 import { registerForensicsTools } from './tools/forensics.js';
 import { registerAnomalyTool } from './tools/forensics_anomaly.js';
+import { registerHarExportTool } from './tools/forensics_har.js';
 import { registerLogTools } from './tools/logs.js';
 import { registerGameTools } from './tools/game.js';
 import { registerWorkflowTools } from './tools/workflow.js';
@@ -129,6 +130,7 @@ export function createServer(ctx) {
   registerDomTreeTool(server, ctx);
   registerStorageTool(server, ctx);
   registerAnomalyTool(server, ctx);
+  registerHarExportTool(server, ctx);
   registerForensicsTools(server, ctx);
   registerLogTools(server, ctx);
   registerGameTools(server, ctx);

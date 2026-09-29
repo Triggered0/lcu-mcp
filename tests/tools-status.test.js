@@ -69,6 +69,7 @@ test('the server registers exactly the tools wired so far', async () => {
     'lol_forensics_anomaly_detect',
     'lol_forensics_bundle',
     'lol_forensics_correlate',
+    'lol_forensics_export_har',
     'lol_game_all',
     'lol_game_events',
     'lol_game_player',
