@@ -15,6 +15,14 @@
     "POST /lol-lobby/v2/lobby/matchmaking/search",
     "PATCH /lol-champ-select/v1/session/actions/*",
     "POST /lol-perks/v1/pages",
-    "PUT /lol-perks/v1/pages/*"
+    "PUT /lol-perks/v1/pages/*",
+    "PATCH /lol-champ-select/v1/session/my-selection",
+    "POST /lol-champ-select/v1/session/bench/swap/*",
+    "POST /lol-lobby/v2/lobby/invitations",
+    "POST /lol-lobby/v2/play-again",
+    "POST /lol-honor/v1/honor",
+    "POST /lol-loot/v1/recipes/*/craft",
+    "POST /lol-chat/v1/conversations/*/messages",
+    "PUT /lol-chat/v1/me"
   ]
 }
