@@ -9,6 +9,7 @@ const HINTS = ['readOnlyHint', 'destructiveHint', 'idempotentHint', 'openWorldHi
 
 // [readOnlyHint, destructiveHint, idempotentHint, openWorldHint]
 const EXPECTED = {
+  lol_analytics_match_detail: [true, false, true, true],
   lol_analytics_match_history: [true, false, true, true],
   lol_analytics_player: [true, false, true, true],
   lol_status: [true, false, true, false],
