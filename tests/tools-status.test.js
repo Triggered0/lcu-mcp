@@ -66,6 +66,8 @@ test('the server registers exactly the tools wired so far', async () => {
     'lol_cdp_screenshot',
     'lol_cdp_storage',
     'lol_cdp_targets',
+    'lol_chat_send',
+    'lol_chat_status',
     'lol_dom_query',
     'lol_endpoints',
     'lol_eval',

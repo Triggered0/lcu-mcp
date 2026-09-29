@@ -24,6 +24,8 @@ const EXPECTED = {
   lol_events_start: [false, false, true, true],
   lol_events_poll: [true, false, true, false],
   lol_events_stop: [false, false, true, true],
+  lol_chat_send: [false, true, false, true],
+  lol_chat_status: [false, true, true, true],
   lol_dom_query: [true, false, true, true],
   lol_eval: [false, true, false, true],
   lol_wamp_record_start: [false, true, false, true],
