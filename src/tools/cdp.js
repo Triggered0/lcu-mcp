@@ -12,7 +12,7 @@ export function registerCdpTools(server, ctx) {
       description:
         'Discover and list all active Chrome DevTools Protocol (CDP) debugging targets (pages, modals, worker contexts) exposed by the League Client. ' +
         'Use this tool to inspect available renderer contexts and discover target IDs before capturing targeted screenshots with lol_cdp_screenshot or tailing console and network. ' +
-        'Behavior: Safe and read-only. Prerequisite: League client must be running with remote debugging enabled (e.g. via Pengu Loader).',
+        'Behavior: Safe and read-only. Prerequisite: League client must be running with remote debugging enabled via Pengu Loader. (Note: Pengu Loader is required for CDP tools; standard LCU REST, events, and workflows work without it).',
       inputSchema: {},
       annotations: {
         readOnlyHint: true,
@@ -38,7 +38,7 @@ export function registerCdpTools(server, ctx) {
         'When to use: When visual rendering, modal layout, or graphic verification is needed. ' +
         'When NOT to use: Do not use for automated state checks or element queries (use lol_dom_query) or API data inspection (use lol_get). ' +
         'Behavior: Safe read of visual pixels from the renderer; writes to local filesystem only when savePath is explicitly supplied. ' +
-        'Prerequisite: League client must be running with remote debugging enabled; check lol_status if disconnected. ' +
+        'Prerequisite: League client must be running with remote debugging enabled via Pengu Loader; check lol_status if disconnected. (Note: Required for CDP tools only). ' +
         'Returns dual-payload MCP content with a base64 image data block plus structured JSON metadata (format, dimensions, byte length, savedTo path).',
       inputSchema: {
         targetId: z.string().optional().describe('Specific CDP target ID to screenshot (defaults to active main client page; query lol_cdp_targets for options)'),

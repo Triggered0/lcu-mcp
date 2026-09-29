@@ -87,6 +87,7 @@ export class CdpUnavailableError extends Error {
   constructor(port, detail) {
     super(
       `CDP unavailable on port ${port}: Pengu Loader not active or RemoteDebuggingPort unset. ` +
+        `Note: Pengu Loader is required specifically for CDP tools (eval, DOM, console, network) to enable remote debugging under Vanguard; standard LCU REST, events, workflows, and game APIs work without it. ` +
         `${penguHint(port)}${detail ? ` (${detail})` : ''}`
     );
     this.name = 'CdpUnavailableError';
@@ -98,7 +99,7 @@ export function penguHint(port) {
   return (
     `Set RemoteDebuggingPort=${port} in "C:\\Program Files\\Pengu Loader\\config" ` +
     '(plain key=value text, one pair per line), then restart the UX with ' +
-    'POST /riotclient/kill-and-restart-ux.'
+    'POST /riotclient/kill-and-restart-ux (or lol_restart_ux).'
   );
 }
 

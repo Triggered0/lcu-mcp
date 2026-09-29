@@ -13,7 +13,7 @@ export function registerDomTools(server, ctx) {
         'Do not use lol_eval when a CSS selector query suffices. ' +
         'For arbitrary JavaScript execution or state mutation in the UI page, use lol_eval instead. ' +
         'For capturing visual UI state as an image, use lol_cdp_screenshot instead. ' +
-        "Prerequisite: Requires Chrome DevTools Protocol (CDP) enabled via Pengu Loader or --remote-debugging-port; check lol_status if connection fails.",
+        "Prerequisite: Requires Chrome DevTools Protocol (CDP) enabled via Pengu Loader; check lol_status if connection fails. Note: Pengu Loader is required for CDP tools, but standard LCU REST, WAMP, and game tools work without it.",
       inputSchema: {
         selector: z.string().min(1).describe('CSS selector matching target elements, e.g. ".lol-uikit-flat-button" or "#rcp-fe-viewport"'),
         all: z.boolean().optional().describe('If true, returns an array of all matching elements; if false (default), returns only the first matching element'),
@@ -43,7 +43,7 @@ export function registerDomTools(server, ctx) {
         "For safe DOM structure inspection, prefer lol_dom_query. " +
         "Use lol_eval ONLY for advanced CEF runtime debugging, custom in-page UI automation, or reading internal renderer properties not exposed via REST. " +
         "Behavior: Destructive and unsandboxed; bypasses the write allowlist by construction. " +
-        "Security: Gated by allowEval config flag (check lol_status); calls are refused if allowEval is false. Prerequisite: Requires active CDP connection.",
+        "Security: Gated by allowEval config flag (check lol_status); calls are refused if allowEval is false. Prerequisite: Requires active CDP connection enabled via Pengu Loader (required for CDP tools; not needed for REST/workflow tools).",
       inputSchema: {
         expression: z.string().min(1).describe('A single valid JavaScript expression to evaluate (not a statement list), e.g. "window.location.href" or "document.title"'),
         awaitPromise: z.boolean().optional().describe('Whether to await resolution if the evaluated expression returns a Promise (default: false)')

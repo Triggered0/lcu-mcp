@@ -69,6 +69,7 @@ test('the server registers exactly the tools wired so far', async () => {
     'lol_game_player',
     'lol_game_stats',
     'lol_get',
+    'lol_launch_client',
     'lol_logs_sessions',
     'lol_logs_tail',
     'lol_logs_watch_poll',

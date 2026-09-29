@@ -24,6 +24,7 @@ import { registerRecorderTools } from './tools/recorder.js';
 import { registerConsoleTools } from './tools/console.js';
 import { registerNetworkTools } from './tools/network.js';
 import { registerUxTools } from './tools/ux.js';
+import { registerLaunchTool } from './tools/launch.js';
 import { registerCdpTools } from './tools/cdp.js';
 import { registerForensicsTools } from './tools/forensics.js';
 import { registerLogTools } from './tools/logs.js';
@@ -116,6 +117,7 @@ export function createServer(ctx) {
   registerConsoleTools(server, ctx);
   registerNetworkTools(server, ctx);
   registerUxTools(server, ctx);
+  registerLaunchTool(server, ctx);
   registerCdpTools(server, ctx);
   registerForensicsTools(server, ctx);
   registerLogTools(server, ctx);

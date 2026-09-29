@@ -32,6 +32,7 @@ const EXPECTED = {
   lol_cdp_network_summary: [true, false, true, false],
   lol_cdp_network_stop: [false, true, true, true],
   lol_restart_ux: [false, true, false, true],
+  lol_launch_client: [false, false, true, true],
   lol_cdp_targets: [true, false, true, true],
   lol_cdp_screenshot: [false, true, false, true],
   lol_forensics_bundle: [true, false, true, true],

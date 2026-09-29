@@ -7,6 +7,7 @@ export function fakeContext(overrides = {}) {
     buffer,
     lcu: {
       statusSnapshot: () => ({ connected: true, port: 29669, lockfilePath: 'L', lastError: null }),
+      credentials: async () => ({ port: 29669, password: 'pw' }),
       request: async () => ({ status: 200, body: 'None' }),
       get: async () => ({ status: 200, body: 'None' })
     },
