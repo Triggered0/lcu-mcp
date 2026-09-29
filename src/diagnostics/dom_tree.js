@@ -112,7 +112,7 @@ export function buildDomInspectorScript({ includeOverlaysOnly = false, maxDepth 
         const isTransparent = opacity <= 0.05 || bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent';
         const rect = el.getBoundingClientRect();
         const coversViewport = (rect.width >= vWidth * 0.7 && rect.height >= vHeight * 0.7) ||
-          (style.position === 'fixed' && rect.width > 0 && rect.height > 0);
+          (style.position === 'fixed' && rect.width >= vWidth * 0.5 && rect.height >= vHeight * 0.5);
 
         if (isTransparent && coversViewport) {
           overlays.push({
@@ -296,6 +296,9 @@ export async function inspectDomTree(cdp, options = {}) {
     throw new Error(
       `CDP DOM inspection failed: ${exceptionDetails.description || exceptionDetails.text || 'unknown error'}`
     );
+  }
+  if (value?.error) {
+    throw new Error(`DOM inspection script failed: ${value.error}`);
   }
   return parseDomHierarchy(value, options);
 }

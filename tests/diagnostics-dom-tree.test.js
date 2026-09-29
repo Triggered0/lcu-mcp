@@ -292,3 +292,24 @@ test('lol_cdp_dom_tree declares annotations [true, false, true, true]', async ()
     openWorldHint: true
   });
 });
+
+test('inspectDomTree throws error if in-page script returns error object', async () => {
+  const mockCdp = {
+    evaluate: async () => ({
+      value: { error: 'Internal DOM selector failed', stack: 'Error: Internal DOM selector failed' },
+      exceptionDetails: null
+    })
+  };
+
+  await assert.rejects(
+    () => inspectDomTree(mockCdp),
+    /DOM inspection script failed: Internal DOM selector failed/
+  );
+});
+
+test('buildDomInspectorScript requires fixed elements to cover at least 50% of viewport', () => {
+  const script = buildDomInspectorScript();
+  assert.ok(script.includes('vWidth * 0.5'));
+  assert.ok(script.includes('vHeight * 0.5'));
+});
+
