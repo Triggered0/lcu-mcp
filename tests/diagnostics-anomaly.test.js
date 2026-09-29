@@ -204,6 +204,7 @@ test('lol_forensics_anomaly_detect MCP tool filters anomalies by severityFilter'
   const dataCritical = JSON.parse(resCritical.content[0].text);
   assert.equal(dataCritical.verdict, 'CRITICAL');
   assert.ok(dataCritical.anomalies.every((a) => a.severity === 'CRITICAL'));
+  assert.match(dataCritical.summary, /\(showing \d+ CRITICAL anomalies\)/);
 
   // Filter only DEGRADED
   const resDegraded = await client.callTool({
@@ -212,7 +213,20 @@ test('lol_forensics_anomaly_detect MCP tool filters anomalies by severityFilter'
   });
   const dataDegraded = JSON.parse(resDegraded.content[0].text);
   assert.ok(dataDegraded.anomalies.every((a) => a.severity === 'DEGRADED'));
+  assert.match(dataDegraded.summary, /\(showing \d+ DEGRADED anomalies\)/);
 
+  await client.close();
+});
+
+test('lol_forensics_anomaly_detect rejects invalid severityFilter via Zod schema validation', async () => {
+  const ctx = fakeContext();
+  const { client } = await connect(ctx);
+  const res = await client.callTool({
+    name: 'lol_forensics_anomaly_detect',
+    arguments: { severityFilter: 'INVALID_LEVEL' }
+  });
+  assert.equal(res.isError, true);
+  assert.match(res.content[0].text, /invalid/i);
   await client.close();
 });
 

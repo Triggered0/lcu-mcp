@@ -21,7 +21,7 @@ export function registerAnomalyTool(server, ctx) {
           .optional()
           .describe('Analysis window in seconds to inspect across all streams (1-3600, default: 60)'),
         severityFilter: z
-          .string()
+          .enum(['CRITICAL', 'DEGRADED', 'ALL'])
           .optional()
           .describe('Filter returned anomalies by severity level: "CRITICAL", "DEGRADED", or "ALL"')
       },
@@ -86,11 +86,11 @@ export function registerAnomalyTool(server, ctx) {
           windowMs
         });
 
-        if (severityFilter && severityFilter.toUpperCase() !== 'ALL') {
-          const filterUpper = severityFilter.toUpperCase();
+        if (severityFilter && severityFilter !== 'ALL') {
           result.anomalies = result.anomalies.filter(
-            (a) => (a.severity || '').toUpperCase() === filterUpper
+            (a) => (a.severity || '').toUpperCase() === severityFilter
           );
+          result.summary = `${result.summary} (showing ${result.anomalies.length} ${severityFilter} anomalies)`;
         }
 
         return ok(result);
