@@ -62,6 +62,7 @@ const EXPECTED = {
   lol_workflow_champ_select_bench: [false, true, false, true],
   lol_workflow_runes_set: [false, true, true, true],
   lol_workflow_lobby: [false, true, false, true],
+  lol_workflow_lobby_invite: [false, true, false, true],
   lol_workflow_spells_set: [false, true, true, true]
 };
 
