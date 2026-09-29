@@ -160,8 +160,15 @@ Nothing here needs a Riot API key or an internet connection: every call goes to 
 | `lol_game_player(name?)` | Fetch real-time stats, abilities, items, and runes for the active or named player |
 | `lol_game_events(afterId?)` | Retrieve in-game events (kills, objectives, aces) with incremental cursor support |
 | `lol_restart_ux(waitForReady?, timeoutSeconds?)` | Safely restart client CEF renderers with readiness polling |
+| `lol_launch_client(executablePath?, pollIntervalMs?, timeoutSeconds?)` | Launch Riot Client / League of Legends client and wait for LCU readiness |
 | `lol_cdp_targets()` | List all active CDP debugging targets (pages, popups, workers) |
 | `lol_cdp_screenshot(targetId?, format?, quality?, savePath?)` | Capture client screenshot via CDP (returns MCP image + disk save) |
+| `lol_cdp_performance()` | CEF performance metrics, JS heap memory usage, DOM node counts, and leak warnings |
+| `lol_cdp_dom_tree(includeOverlaysOnly?, maxDepth?)` | Inspect UI modal hierarchy, viewport routes, and click-blocking transparent overlays |
+| `lol_cdp_storage(storageType?, filter?, limit?, parseJson?)` | Inspect localStorage/sessionStorage keys and feature flags with credential redaction |
+| `lol_cdp_network_bottlenecks(thresholdMs?, limit?, includeInitiators?)` | Identify slow requests, P50/P90/P99 endpoint latencies, and failed assets |
+| `lol_forensics_anomaly_detect(windowSeconds?, severityFilter?)` | Scan across all streams for crash signatures, HTTP error clusters, and console bursts |
+| `lol_forensics_export_har(limit?, savePath?)` | Export captured HTTP network traffic to standard HAR 1.2 archive with redaction |
 | `lol_schema(path?, method?, model?, refresh?)` | Query internal LCU OpenAPI/Swagger v2 schemas and models |
 | `lol_forensics_correlate(since?, until?, limit?, sources?, uriPrefix?, levels?, networkFailedOnly?, logLevel?, format?)` | Correlate telemetry across all 5 streams (WAMP, CDP console, CDP network, disk logs, live game) on a shared time axis |
 | `lol_forensics_bundle(since?, until?, limit?, sources?, includeLogTail?, format?)` | Generate an end-to-end diagnostic snapshot combining system status, active timeline streams, and disk log fallbacks |
@@ -236,6 +243,15 @@ Complex client bugs often span multiple architectural layers — for example, a 
   - Automatically falls back to reading the last 50 lines of `LeagueClient.log` from disk when the live log watcher is unstarted or empty (`includeLogTail: true`), guaranteeing diagnostic context even when recorders were not pre-armed.
   - Sanitizes all lockfile passwords, Riot authentication tokens, and session credentials using deep secret redaction.
   - Supported parameters: `since`, `until`, `limit` (default 200, max 2000), `sources` (stream filtering), `includeLogTail` (fallback to disk log tail, default `true`), and `format` (`'markdown'` for a ready-to-paste triage report or `'json'` for structured tooling).
+
+- **`lol_forensics_anomaly_detect`**: Scans across all active background streams (`wamp`, `cdp`, `network`, `logs`) for crash signatures, HTTP 5xx error bursts, and frontend exception spikes, returning an overall health verdict (`HEALTHY`, `DEGRADED`, `CRITICAL`), root-cause hypotheses, and anomaly timestamps. Supports `windowSeconds` and `severityFilter` (`CRITICAL`, `DEGRADED`, `ALL`).
+- **`lol_forensics_export_har`**: Exports captured HTTP/HTTPS network traffic from the active network tailer into a standard HAR 1.2 archive. Automatically redacts sensitive authorization headers, bearer tokens, and session cookies. Can return the HAR JSON structure directly or save it to disk via `savePath`.
+
+**Deep CEF diagnostics & UI inspection.** When diagnosing client frontend lag, memory leaks, unclickable buttons, or client UI state:
+- **`lol_cdp_performance`**: Queries CEF DevTools performance metrics. Normalizes JS heap memory (`jsHeapUsedMb`, `jsHeapTotalMb`), utilization ratios, DOM node counts, and style recalculation counts, raising warnings when memory pressure thresholds are breached (>250MB heap or >15,000 DOM nodes).
+- **`lol_cdp_network_bottlenecks`**: Analyzes buffered network traffic to rank slowest HTTP calls, calculate P50, P90, and P99 latencies per normalized endpoint pattern (e.g. `/lol-champ-select/v1/session`), group failed asset loads (image 404s, failed script plugins), and correlate initiator script stack traces.
+- **`lol_cdp_dom_tree`**: Analyzes the client's live DOM modal stack, visible viewports/plugins (`rcp-fe-lol-*`), and identifies invisible/transparent full-screen backdrop overlays (`opacity: 0` with active pointer events) that frequently cause "frozen UI" states or unclickable buttons.
+- **`lol_cdp_storage`**: Inspects client `localStorage` and `sessionStorage` in the CEF context. Features case-insensitive substring key/value filtering, structured JSON parsing, and automatic multi-tier redaction of Riot auth tokens, session passwords, and sensitive cookies.
 
 **Workflow macro automation (`lol_workflow_*`).** High-level client automation needs multi-step orchestration across REST endpoints, active session discovery, and static data catalogs. Instead of 4–8 separate round-trip tool calls with manual state inspection, each macro inspects its preconditions and then issues the one mutation that follows from them. Rollback is limited to what a call created itself — `lol_workflow_lobby` closes a lobby it opened if the matchmaking search then fails — and otherwise a macro that fails part-way leaves the client where it got to. Either way the error names the failing call and the state the client is left in.
 
