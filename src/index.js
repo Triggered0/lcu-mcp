@@ -28,6 +28,7 @@ import { registerLaunchTool } from './tools/launch.js';
 import { registerCdpTools } from './tools/cdp.js';
 import { registerCdpPerformanceTool } from './tools/cdp_performance.js';
 import { registerForensicsTools } from './tools/forensics.js';
+import { registerAnomalyTool } from './tools/forensics_anomaly.js';
 import { registerLogTools } from './tools/logs.js';
 import { registerGameTools } from './tools/game.js';
 import { registerWorkflowTools } from './tools/workflow.js';
@@ -121,6 +122,7 @@ export function createServer(ctx) {
   registerLaunchTool(server, ctx);
   registerCdpTools(server, ctx);
   registerCdpPerformanceTool(server, ctx);
+  registerAnomalyTool(server, ctx);
   registerForensicsTools(server, ctx);
   registerLogTools(server, ctx);
   registerGameTools(server, ctx);

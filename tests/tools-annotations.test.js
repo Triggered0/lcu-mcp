@@ -36,6 +36,7 @@ const EXPECTED = {
   lol_cdp_targets: [true, false, true, true],
   lol_cdp_performance: [true, false, true, true],
   lol_cdp_screenshot: [false, true, false, true],
+  lol_forensics_anomaly_detect: [true, false, true, false],
   lol_forensics_bundle: [true, false, true, true],
   lol_forensics_correlate: [true, false, true, false],
   lol_logs_tail: [true, false, true, true],
