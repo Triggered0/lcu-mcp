@@ -26,6 +26,7 @@ import { registerNetworkTools } from './tools/network.js';
 import { registerUxTools } from './tools/ux.js';
 import { registerLaunchTool } from './tools/launch.js';
 import { registerCdpTools } from './tools/cdp.js';
+import { registerCdpPerformanceTool } from './tools/cdp_performance.js';
 import { registerForensicsTools } from './tools/forensics.js';
 import { registerLogTools } from './tools/logs.js';
 import { registerGameTools } from './tools/game.js';
@@ -119,6 +120,7 @@ export function createServer(ctx) {
   registerUxTools(server, ctx);
   registerLaunchTool(server, ctx);
   registerCdpTools(server, ctx);
+  registerCdpPerformanceTool(server, ctx);
   registerForensicsTools(server, ctx);
   registerLogTools(server, ctx);
   registerGameTools(server, ctx);
