@@ -36,6 +36,7 @@ import { registerHarExportTool } from './tools/forensics_har.js';
 import { registerLogTools } from './tools/logs.js';
 import { registerGameTools } from './tools/game.js';
 import { registerWorkflowTools } from './tools/workflow.js';
+import { registerPlayerAnalyticsTools } from './tools/analytics_player.js';
 import { LiveGameClient } from './game/client.js';
 import { LogSessionFinder } from './logs/sessions.js';
 import { LogReader } from './logs/reader.js';
@@ -135,6 +136,7 @@ export function createServer(ctx) {
   registerLogTools(server, ctx);
   registerGameTools(server, ctx);
   registerWorkflowTools(server, ctx);
+  registerPlayerAnalyticsTools(server, ctx);
   return server;
 }
 
