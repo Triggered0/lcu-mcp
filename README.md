@@ -122,6 +122,13 @@ Start the League client, then ask your assistant in plain language. A few things
 | *"What does the lobby endpoint accept?"* | `lol_schema("/lol-lobby/v2/lobby")` |
 | *"Accept the ready check."* | `lol_request("POST", "/lol-matchmaking/v1/ready-check/accept")` — needs a [write allowlist](#configuration) entry |
 | *"Screenshot the client."* | `lol_cdp_screenshot` — needs [Pengu Loader](#enabling-dom-access) |
+| *"What is my ranked winrate and recent roles?"* | `lol_analytics_player` |
+| *"Summarize my last 5 matches concisely."* | `lol_analytics_match_history(count=5)` |
+| *"Analyze damage and objectives in my last game."* | `lol_analytics_match_detail` |
+| *"What is our team damage mix in champ select?"* | `lol_analytics_champ_select_scout` |
+| *"Set my summoner spells to Flash and Ignite."* | `lol_workflow_spells_set(spell1="flash", spell2="ignite")` |
+| *"Swap champion with ARAM bench."* | `lol_workflow_champ_select_bench(champion="AramBenchChamp")` |
+| *"How much essence do my loot shards yield?"* | `lol_analytics_loot_summary` |
 
 Nothing here needs a Riot API key or an internet connection: every call goes to `127.0.0.1`.
 
@@ -174,8 +181,22 @@ Nothing here needs a Riot API key or an internet connection: every call goes to 
 | `lol_forensics_bundle(since?, until?, limit?, sources?, includeLogTail?, format?)` | Generate an end-to-end diagnostic snapshot combining system status, active timeline streams, and disk log fallbacks |
 | `lol_workflow_matchmaking_accept()` | Accept matchmaking ready check if active and unaccepted |
 | `lol_workflow_champ_select(champion, type?, completed?)` | Pick, hover, or ban champion by name or numeric ID in active champion select |
+| `lol_workflow_champ_select_bench(champion)` | Swap champion with available ARAM bench champion by name or ID |
+| `lol_workflow_spells_set(spell1, spell2?)` | Set summoner spells (Flash, Ignite, Smite, Teleport, etc.) by name or ID in champion select |
 | `lol_workflow_runes_set(primaryStyleId, subStyleId, selectedPerkIds, name?, replace?)` | Configure, update, and activate a rune/perk page |
 | `lol_workflow_lobby(queueId, startMatchmaking?)` | Create game lobby for a queue (e.g. 420 Ranked Solo, 450 ARAM) and optionally start matchmaking |
+| `lol_workflow_lobby_invite(toSummonerPuuids)` | Invite players to current lobby party by summoner PUUIDs |
+| `lol_workflow_play_again()` | Recreate game lobby from post-game End of Game screen |
+| `lol_workflow_honor(target, honorCategory?)` | Vote for teammate on post-game honor ballot ("COOL", "SHOTCALLER", "HEART") |
+| `lol_analytics_player(summonerName?, puuid?)` | Aggregate player identity, ranked tiers, recent winrates, and role breakdown |
+| `lol_analytics_match_history(summonerName?, puuid?, count?)` | Token-efficient compact match history rows |
+| `lol_analytics_match_detail(gameId?)` | Deep post-game breakdown (objectives, damage share, gold, KDA, team stats) |
+| `lol_analytics_champ_select_scout()` | Champ select composition scout (ally/enemy roles, champions, AP/AD damage mix) |
+| `lol_analytics_live_combat()` | Real-time live in-game combat telemetry, lane differentials, objective clock |
+| `lol_analytics_loot_summary()` | Calculate total Blue and Orange Essence yields from champion and skin shards |
+| `lol_workflow_loot_disenchant(lootId, count?)` | Disenchant champion or skin shards for essence |
+| `lol_chat_send(message, conversationId?)` | Send chat message into active champion select, lobby, or chat |
+| `lol_chat_status(availability?, statusMessage?)` | Update summoner presence status message and availability |
 
 **`lol_status` first.** When anything else fails it tells you which half is down — a closed client looks nothing like a missing Pengu install.
 
@@ -259,8 +280,28 @@ Macros mutate the client, so **every write they send goes through the [write all
 
 - **`lol_workflow_matchmaking_accept`**: One-call match acceptance. Verifies that a matchmaking ready check is actively in progress (`'InProgress'`) before posting acceptance. Idempotent if already accepted (`playerResponse: 'Accepted'`); returns state without throwing when no check is in progress. A closed client is reported as an error, not as "no ready check".
 - **`lol_workflow_champ_select`**: Pick, hover, or ban champions in active champion select. Resolves champions by human-friendly name (e.g. `"Aatrox"`, `"Yasuo"`) or numeric ID via local static game data, identifies the local player's active action cell, and executes a hover (`completed: false`) or lock-in (`completed: true`, default). An exact name wins; a partial name that matches more than one champion is refused with the candidates listed, because a lock-in cannot be undone. Safely detects if champion select is inactive or if no eligible action is currently pending for the player.
+- **`lol_workflow_champ_select_bench`**: Swap active champion with an available champion on the ARAM bench by name or ID. Safely resolves bench champions, checks session state, and swaps without obsolete reroll mechanics.
+- **`lol_workflow_spells_set`**: Set summoner spells in active champion select by name (e.g. `"flash"`, `"ignite"`, `"smite"`, `"teleport"`) or numeric ID. Updates `spell1` and optionally `spell2` simultaneously.
 - **`lol_workflow_runes_set`**: Set, replace, and activate rune pages. With `replace: true` (default) it reuses an editable page **whose name matches `name`** and overwrites it; otherwise it creates a new editable page. It never overwrites a page the user named something else. Accepts primary and secondary style IDs along with an array of perk IDs, ensuring the resulting page is immediately activated.
 - **`lol_workflow_lobby`**: Create game lobbies and optionally trigger queue search. Sets up custom or matchmade lobbies by queue ID (e.g. `420` for Ranked Solo/Duo, `440` for Ranked Flex, `450` for ARAM). A no-op if the client is already in the requested queue; if it is in a lobby on a *different* queue, that lobby is replaced. Optionally dispatches matchmaking search (`startMatchmaking: true`) within the same operation. If that search fails and the call had created the lobby from nothing, the lobby is closed again; if it had replaced an existing lobby, the new one is kept, because the old party cannot be restored and no lobby at all is the worse outcome.
+- **`lol_workflow_lobby_invite`**: Dispatch invitations to summoner PUUIDs to join the current party lobby.
+- **`lol_workflow_play_again`**: Recreate previous game lobby from the End of Game or post-match screen with party settings preserved.
+- **`lol_workflow_honor`**: Submit an honor vote for an eligible teammate on the post-game honor ballot by name or summonerId with badge category (`"COOL"`, `"SHOTCALLER"`, `"HEART"`).
+
+**Player & Match Analytics (`lol_analytics_*`).** Read-only, token-efficient performance scouting and post-match telemetry:
+- **`lol_analytics_player`**: Aggregates summoner identity, ranked tiers and LP (Solo/Duo, Flex, Arena), win rates, and recent match role tendencies in a single compact JSON summary.
+- **`lol_analytics_match_history`**: Returns compact, token-efficient match rows (champion name, outcome, KDA, CS, duration, queue, timestamp) without bloating host LLM context windows.
+- **`lol_analytics_match_detail`**: Deep post-game breakdown analyzing baron/dragon/herald/tower objectives, individual damage shares, gold earned, and combat metrics for any historical match.
+- **`lol_analytics_champ_select_scout`**: Evaluates active champion select draft composition, assessing allied and enemy champion picks, assigned roles, bans, and team magic vs. physical (AP vs. AD) damage distribution.
+- **`lol_analytics_live_combat`**: Connects to the in-match game engine (`127.0.0.1:2999`) to calculate real-time combat telemetry: current gold and CS differentials vs lane opponents, team gold leads, KDA pacing, and live match clock.
+
+**Loot Economy & Crafting (`lol_analytics_loot_summary`, `lol_workflow_loot_disenchant`).**
+- **`lol_analytics_loot_summary`**: Scans player inventory and tallies Blue Essence yield from champion shards and Orange Essence yield from skin, ward, and emote shards.
+- **`lol_workflow_loot_disenchant`**: Disenchants a specified number of shards for a given loot ID via the client crafting recipe endpoint. Subject to write allowlist.
+
+**In-Client Chat & Status (`lol_chat_*`).**
+- **`lol_chat_send`**: Dispatches chat messages directly into active champion select, lobby, or custom conversation channels without requiring manual conversation discovery.
+- **`lol_chat_status`**: Updates player chat availability (`chat`, `away`, `dnd`, `mobile`) and custom status message strings visible to friends.
 
 **Filters are URI prefixes applied at ingest.** The unfiltered firehose fills the buffer quickly, so pass something like `["/lol-champ-select/", "/lol-gameflow/"]` unless you genuinely want everything.
 
@@ -303,7 +344,7 @@ Allowlist matching rules:
 
 - An entry is `METHOD path`. The method is compared case-insensitively, the path **case-sensitively**.
 - `GET` and `HEAD` are always allowed and need no entry.
-- `*` is only meaningful as a trailing path segment: `/a/b/*` matches `/a/b/c` but not `/a/b/c/d` and not `/a/b`. Anywhere else it is a literal character.
+- `*` matches a single path segment without crossing `/`: `/a/b/*` matches `/a/b/c` (e.g. `PATCH /lol-champ-select/v1/session/actions/*`), and infix `/a/*/c` matches `/a/b/c` (e.g. `POST /lol-loot/v1/recipes/*/craft` and `POST /lol-chat/v1/conversations/*/messages`), but does not match across multiple `/` delimiters.
 - A refused call returns the exact config line that would permit it, and the request is never sent.
 
 ## Enabling DOM access
