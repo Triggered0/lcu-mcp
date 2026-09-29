@@ -9,7 +9,8 @@ export function registerDomTools(server, ctx) {
       title: 'Query the League client DOM',
       description:
         'Query HTML elements in the active League client Chromium Embedded Framework (CEF) UI DOM using CSS selectors. ' +
-        'Use this tool to inspect live UI elements, verify modal state, or find element identifiers. ' +
+        'Use this tool as the primary safe method to inspect live UI elements, verify modal state, or find element identifiers. ' +
+        'Do not use lol_eval when a CSS selector query suffices. ' +
         'For arbitrary JavaScript execution or state mutation in the UI page, use lol_eval instead. ' +
         'For capturing visual UI state as an image, use lol_cdp_screenshot instead. ' +
         "Prerequisite: Requires Chrome DevTools Protocol (CDP) enabled via Pengu Loader or --remote-debugging-port; check lol_status if connection fails.",
@@ -37,8 +38,10 @@ export function registerDomTools(server, ctx) {
       title: 'Evaluate JavaScript in the client page',
       description:
         "Execute an arbitrary JavaScript expression within the League client Chromium Embedded Framework (CEF) renderer context and return the evaluated result. " +
-        "Use this tool for advanced automation or reading runtime frontend properties not exposed via REST. " +
-        "For safe DOM structure inspection, prefer lol_dom_query. For standard LCU REST calls, prefer lol_request or lol_get. " +
+        "CRITICAL: Do NOT use lol_eval for LCU REST API calls (e.g. fetch('/lol-...')) or client state queries. " +
+        "For safe LCU REST queries, ALWAYS use lol_get or lol_request. For automated game actions (lobby, matchmaking, champ-select, runes), ALWAYS use lol_workflow_* tools. " +
+        "For safe DOM structure inspection, prefer lol_dom_query. " +
+        "Use lol_eval ONLY for advanced CEF runtime debugging, custom in-page UI automation, or reading internal renderer properties not exposed via REST. " +
         "Behavior: Destructive and unsandboxed; bypasses the write allowlist by construction. " +
         "Security: Gated by allowEval config flag (check lol_status); calls are refused if allowEval is false. Prerequisite: Requires active CDP connection.",
       inputSchema: {
@@ -72,7 +75,12 @@ export function registerDomTools(server, ctx) {
               text: redactSecrets(exceptionDetails.text, secrets),
               description: redactSecrets(exceptionDetails.description, secrets)
             };
-      return ok({ value, exceptionDetails: safeDetails });
+      const result = { value, exceptionDetails: safeDetails };
+      if (expression.includes('/lol-')) {
+        result.hint =
+          'For LCU REST endpoints, prefer lol_get or lol_request instead of lol_eval. For common workflows, prefer lol_workflow_* tools.';
+      }
+      return ok(result);
     }, ctx)
   );
 }

@@ -14,7 +14,7 @@ export function registerPassthroughTools(server, ctx) {
       title: 'GET an LCU endpoint',
       description:
         'Send a read-only HTTP GET request to any internal League Client Update (LCU) REST API endpoint and return { status, body }. ' +
-        'Use this tool to inspect live client state such as summoner profile, lobby members, or gameflow phase. ' +
+        'This is the primary and recommended tool to inspect live client state (such as summoner profile, lobby members, or gameflow phase) instead of using lol_eval. ' +
         'For mutating actions (POST, PUT, PATCH, DELETE), use lol_request instead. ' +
         'To discover supported endpoint paths, use lol_endpoints or lol_schema. ' +
         'Prerequisite: League client must be running. Safe and idempotent; requires no write allowlist entries.',
@@ -36,6 +36,7 @@ export function registerPassthroughTools(server, ctx) {
       description:
         'Send an HTTP request with any verb (GET, HEAD, POST, PUT, PATCH, DELETE) to an internal League Client Update (LCU) REST endpoint. ' +
         'Use this tool to perform client mutations or call endpoints not covered by dedicated workflow tools. ' +
+        'Always prefer this tool over lol_eval for REST API interactions. ' +
         'For safe read-only queries, prefer lol_get. For common automated actions like champion selection or lobby creation, prefer lol_workflow_* tools. ' +
         'Behavior: GET and HEAD are always allowed. Mutating verbs require matching entries in the write allowlist; unauthorized requests are rejected before execution.',
       inputSchema: {

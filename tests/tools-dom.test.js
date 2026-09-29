@@ -62,12 +62,27 @@ test('lol_eval evaluates and returns the value', async () => {
   const client = await connect(ctx);
   const result = await client.callTool({
     name: 'lol_eval',
-    arguments: { expression: "fetch('/lol-gameflow/v1/session').then(r => r.json())", awaitPromise: true }
+    arguments: { expression: 'document.title', awaitPromise: true }
   });
   assert.deepEqual(JSON.parse(result.content[0].text), { value: { phase: 'ReadyCheck' }, exceptionDetails: null });
   assert.equal(calls[0].options.awaitPromise, true);
   await client.close();
 });
+
+test('lol_eval includes a steering hint when evaluating an LCU endpoint fetch', async () => {
+  const { ctx } = cdpContext();
+  const client = await connect(ctx);
+  const result = await client.callTool({
+    name: 'lol_eval',
+    arguments: { expression: "fetch('/lol-gameflow/v1/session').then(r => r.json())", awaitPromise: true }
+  });
+  const payload = JSON.parse(result.content[0].text);
+  assert.ok(payload.hint, 'expected hint to be present on LCU fetch');
+  assert.match(payload.hint, /lol_get/);
+  assert.match(payload.hint, /lol_request/);
+  await client.close();
+});
+
 
 test('lol_eval is refused when allowEval is false', async () => {
   const { ctx, calls } = cdpContext({ allowEval: false });

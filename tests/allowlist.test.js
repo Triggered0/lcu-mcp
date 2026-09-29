@@ -43,3 +43,18 @@ test('denial names the exact line to add', () => {
   assert.match(result.message, /"POST \/lol-lobby\/v2\/lobby"/);
   assert.match(result.message, /writeAllowlist/);
 });
+
+test('query string does not break allowlist matching', () => {
+  assert.equal(checkWrite('POST', '/lol-matchmaking/v1/ready-check/accept?foo=bar', list).allowed, true);
+  assert.equal(checkWrite('POST', '/lol-champ-select/v1/session/actions/7?hover=true', list).allowed, true);
+});
+
+test('path traversal attempts are blocked', () => {
+  assert.equal(checkWrite('POST', '/lol-champ-select/v1/session/actions/..', list).allowed, false);
+  assert.equal(checkWrite('POST', '/lol-champ-select/v1/session/actions/../secret', list).allowed, false);
+  assert.equal(checkWrite('POST', '/lol-champ-select/v1/session/actions/..%2fsecret', list).allowed, false);
+  assert.equal(checkWrite('POST', '/lol-champ-select/v1/session/actions/%2e%2e%2fsecret', list).allowed, false);
+  assert.equal(checkWrite('POST', '/lol-champ-select/v1/session/actions/7/..', list).allowed, false);
+  assert.equal(checkWrite('POST', '//evil.com/session/actions/7', list).allowed, false);
+});
+
