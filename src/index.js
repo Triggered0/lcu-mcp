@@ -28,6 +28,7 @@ import { registerLaunchTool } from './tools/launch.js';
 import { registerCdpTools } from './tools/cdp.js';
 import { registerCdpPerformanceTool } from './tools/cdp_performance.js';
 import { registerNetworkBottlenecksTool } from './tools/cdp_bottlenecks.js';
+import { registerDomTreeTool } from './tools/cdp_dom_tree.js';
 import { registerForensicsTools } from './tools/forensics.js';
 import { registerAnomalyTool } from './tools/forensics_anomaly.js';
 import { registerLogTools } from './tools/logs.js';
@@ -124,6 +125,7 @@ export function createServer(ctx) {
   registerCdpTools(server, ctx);
   registerCdpPerformanceTool(server, ctx);
   registerNetworkBottlenecksTool(server, ctx);
+  registerDomTreeTool(server, ctx);
   registerAnomalyTool(server, ctx);
   registerForensicsTools(server, ctx);
   registerLogTools(server, ctx);
