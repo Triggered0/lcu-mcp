@@ -46,6 +46,7 @@ test('the server registers exactly the tools wired so far', async () => {
   const { client } = await connect(fakeContext());
   const names = (await client.listTools()).tools.map((t) => t.name).sort();
   assert.deepEqual(names, [
+    'lol_analytics_champ_select_scout',
     'lol_analytics_match_detail',
     'lol_analytics_match_history',
     'lol_analytics_player',
