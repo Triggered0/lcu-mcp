@@ -40,6 +40,7 @@ import { registerPlayerAnalyticsTools } from './tools/analytics_player.js';
 import { registerMatchHistoryTools } from './tools/analytics_history.js';
 import { registerMatchAnalyticsTools } from './tools/analytics_match.js';
 import { registerScoutAnalyticsTools } from './tools/analytics_scout.js';
+import { registerLiveAnalyticsTools } from './tools/analytics_live.js';
 import { LiveGameClient } from './game/client.js';
 import { LogSessionFinder } from './logs/sessions.js';
 import { LogReader } from './logs/reader.js';
@@ -143,6 +144,7 @@ export function createServer(ctx) {
   registerMatchHistoryTools(server, ctx);
   registerMatchAnalyticsTools(server, ctx);
   registerScoutAnalyticsTools(server, ctx);
+  registerLiveAnalyticsTools(server, ctx);
   return server;
 }
 
