@@ -40,6 +40,7 @@ import { registerWorkflowSpellsTool } from './tools/workflow_spells.js';
 import { registerWorkflowBenchTool } from './tools/workflow_bench.js';
 import { registerWorkflowLobbyInviteTool } from './tools/workflow_lobby_invite.js';
 import { registerWorkflowPostgameTools } from './tools/workflow_postgame.js';
+import { registerLootTools } from './tools/loot.js';
 import { registerPlayerAnalyticsTools } from './tools/analytics_player.js';
 import { registerMatchHistoryTools } from './tools/analytics_history.js';
 import { registerMatchAnalyticsTools } from './tools/analytics_match.js';
@@ -148,6 +149,7 @@ export function createServer(ctx) {
   registerWorkflowBenchTool(server, ctx);
   registerWorkflowLobbyInviteTool(server, ctx);
   registerWorkflowPostgameTools(server, ctx);
+  registerLootTools(server, ctx);
   registerPlayerAnalyticsTools(server, ctx);
   registerMatchHistoryTools(server, ctx);
   registerMatchAnalyticsTools(server, ctx);

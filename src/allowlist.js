@@ -15,11 +15,18 @@ export function normalizePath(path) {
 }
 
 function pathMatches(pattern, path) {
-  if (!pattern.endsWith('/*')) return pattern === path;
-  const prefix = pattern.slice(0, -1);
-  if (!path.startsWith(prefix)) return false;
-  const rest = path.slice(prefix.length);
-  return rest.length > 0 && !rest.includes('/');
+  if (pattern === path) return true;
+  if (!pattern.includes('/*')) return false;
+
+  const parts = pattern.split('/*');
+  if (parts.length !== 2) return false;
+
+  const [prefix, suffix] = parts;
+  if (!path.startsWith(prefix + '/')) return false;
+  if (suffix.length > 0 && !path.endsWith(suffix)) return false;
+
+  const middle = path.slice(prefix.length + 1, suffix.length > 0 ? -suffix.length : undefined);
+  return middle.length > 0 && !middle.includes('/');
 }
 
 export function checkWrite(method, path, allowlist = []) {

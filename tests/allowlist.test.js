@@ -35,6 +35,14 @@ test('trailing wildcard matches exactly one further segment', () => {
   assert.equal(checkWrite('POST', '/lol-champ-select/v1/session/actions/', list).allowed, false);
 });
 
+test('infix wildcard matches exactly one segment in between', () => {
+  const infixList = ['POST /lol-loot/v1/recipes/*/craft', 'POST /lol-chat/v1/conversations/*/messages'];
+  assert.equal(checkWrite('POST', '/lol-loot/v1/recipes/CHAMPION_103/craft', infixList).allowed, true);
+  assert.equal(checkWrite('POST', '/lol-loot/v1/recipes/CHAMPION_103/extra/craft', infixList).allowed, false);
+  assert.equal(checkWrite('POST', '/lol-loot/v1/recipes//craft', infixList).allowed, false);
+  assert.equal(checkWrite('POST', '/lol-chat/v1/conversations/conv-1/messages', infixList).allowed, true);
+});
+
 test('denial names the exact line to add', () => {
   const result = checkWrite('POST', '/lol-lobby/v2/lobby', list);
   assert.equal(result.allowed, false);

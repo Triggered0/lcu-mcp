@@ -48,6 +48,7 @@ test('the server registers exactly the tools wired so far', async () => {
   assert.deepEqual(names, [
     'lol_analytics_champ_select_scout',
     'lol_analytics_live_combat',
+    'lol_analytics_loot_summary',
     'lol_analytics_match_detail',
     'lol_analytics_match_history',
     'lol_analytics_player',
@@ -99,6 +100,7 @@ test('the server registers exactly the tools wired so far', async () => {
     'lol_workflow_honor',
     'lol_workflow_lobby',
     'lol_workflow_lobby_invite',
+    'lol_workflow_loot_disenchant',
     'lol_workflow_matchmaking_accept',
     'lol_workflow_play_again',
     'lol_workflow_runes_set',

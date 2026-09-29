@@ -11,6 +11,7 @@ const HINTS = ['readOnlyHint', 'destructiveHint', 'idempotentHint', 'openWorldHi
 const EXPECTED = {
   lol_analytics_champ_select_scout: [true, false, true, true],
   lol_analytics_live_combat: [true, false, true, true],
+  lol_analytics_loot_summary: [true, false, true, true],
   lol_analytics_match_detail: [true, false, true, true],
   lol_analytics_match_history: [true, false, true, true],
   lol_analytics_player: [true, false, true, true],
@@ -64,6 +65,7 @@ const EXPECTED = {
   lol_workflow_runes_set: [false, true, true, true],
   lol_workflow_lobby: [false, true, false, true],
   lol_workflow_lobby_invite: [false, true, false, true],
+  lol_workflow_loot_disenchant: [false, true, false, true],
   lol_workflow_play_again: [false, true, false, true],
   lol_workflow_spells_set: [false, true, true, true]
 };
