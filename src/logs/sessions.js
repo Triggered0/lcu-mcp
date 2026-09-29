@@ -1,12 +1,17 @@
 import { readdir, stat } from 'node:fs/promises';
-import { join, dirname, basename } from 'node:path';
+import { join, dirname, basename, win32 } from 'node:path';
 import { DEFAULT_LOCKFILE_PATH } from '../lcu/lockfile.js';
 
 export class LogSessionFinder {
   #logsDir;
 
   constructor({ logsDir = null, lockfilePath = DEFAULT_LOCKFILE_PATH } = {}) {
-    this.#logsDir = logsDir || join(dirname(lockfilePath), 'Logs');
+    if (logsDir) {
+      this.#logsDir = logsDir;
+    } else {
+      const p = lockfilePath.includes('\\') ? win32 : { dirname, join };
+      this.#logsDir = p.join(p.dirname(lockfilePath), 'Logs');
+    }
   }
 
   get logsDir() {
