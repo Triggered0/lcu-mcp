@@ -29,6 +29,7 @@ const EXPECTED = {
   lol_cdp_network_start: [false, false, true, true],
   lol_cdp_network_tail: [true, false, true, false],
   lol_cdp_network_body: [true, false, true, true],
+  lol_cdp_network_bottlenecks: [true, false, true, false],
   lol_cdp_network_summary: [true, false, true, false],
   lol_cdp_network_stop: [false, true, true, true],
   lol_restart_ux: [false, true, false, true],
